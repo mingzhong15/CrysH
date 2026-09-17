@@ -27,6 +27,7 @@ in v0.2.
 pip install crysh              # core: numpy + ase only
 pip install "crysh[tables]"    # + pandas/pyarrow for writing parquet tables
 pip install "crysh[research]"  # + pymatgen/matplotlib research tooling
+pip install "crysh[controls]"  # + ruamel.yaml to (re)write controls/data/labels.yaml
 ```
 
 ## Quickstart
@@ -41,6 +42,13 @@ rec["d_star"], rec["morphology_class"], rec["mean_cn"]
 
 # 一行 record 的全部列（59 列，列序即 parquet 列序）
 list(rec) == crysh.RECORD_COLUMNS
+
+# 逐位点的局域建筑块（L3 的 m 实例）+ 结构级汇总
+sites, summary = crysh.map_sites(bulk("NaCl", "rocksalt", a=5.64))
+sites[0].cn_species, sites[0].cn1, sites[0].cn_eff
+# ('Cl6', 6, 6.0)
+summary["cn_species_top"], summary["shell_conf_mean"]
+# ('Cl6', 0.325)
 ```
 
 Batch a manifest of structures (multiprocess, writes records + side tables):
@@ -58,8 +66,9 @@ stats = run_batch("manifest.jsonl", "records_20k.parquet", cfg=cfg, n_proc=32)
 # {'n_total': 20000, 'n_ok': 19997, 'n_failed': 3}
 ```
 
-Every path is passed in explicitly: the library reads **no environment variables** and never
-guesses a directory layout.
+Every path is passed in explicitly: the library never guesses a directory layout. The one
+environment variable it looks at is `CRYSH_CN_METHOD`, which only picks the CN reference method
+of `crysh.controls` (same knob as `build_all(cn_method=...)`, and the argument wins).
 
 ## What one structure maps to
 
@@ -96,22 +105,37 @@ See `crysh.tokens` for the frozen format.
 ```
 src/crysh/                 core (~4.4k lines incl. docstrings)
 ├── config.py              MapperConfig + frozen columns + the single λ grid
+├── kernels.py             ONE neighbour list: masked graphs + sorted per-site neighbours
 ├── bond.py                periodic bond graph (calibrated pair table or covalent × λ)
 ├── dimensionality.py      d(λ) spectrum, integer-rank topology
 ├── validity.py            L0
 ├── morphology.py          L2
-├── coord.py               L3
+├── coord.py               L3 (coordination numbers)
 ├── geometry.py            L4 (features + q4/q6 routing)
+├── localenv.py            L3 building blocks: m = (Z, CN, geometry, chemistry, distortion)
 ├── tokens.py              L5 tokens and sharing
 ├── metrics.py             vocabulary statistics (richness, effective diversity, accumulation)
-├── records.py             map_record / map_structure / run_batch
+├── records.py             map_record / map_structure / map_sites / run_batch
 ├── controls.py            + controls_data/ — 44 labelled ground-truth structures
 ├── dev.py                 synthetic structures (smoke tests, not physics)
 └── research/              optional research tooling
     ├── figdata.py  fingerprint.py  io.py  report.py
     └── oracle.py   pymatgen benchmarks    calibration.py  Phase-0 cutoff/CN tables
 tests/                     runs standalone, no research data needed
+├── test_*.py              core tier (numpy + ase only)
+├── tables/                + pandas / pyarrow
+└── research/              + pymatgen / matplotlib
 ```
+
+## Known issues
+
+- The polyhedral **sharing criterion is wrong for periodic structures**: it pairs centres
+  by atom index, so periodic images of the same ligand collapse. Diamond tetrahedra
+  (physically corner-sharing) come out as `isolated`. Pinned by `xfail(strict=True)` tests
+  in `tests/test_site_api.py`; fixing it changes frozen sharing tokens, so it ships with the
+  next index/coverage rebuild.
+- `motifnet` (motif super-node graph, per-family dimensionality, edge vocabulary) is not
+  implemented yet.
 
 ## Verification
 
@@ -120,6 +144,22 @@ Ground truth is not a spreadsheet — it is code: 44 labelled structures under
 MoS₂ → prism/edge/2D, …) plus pymatgen oracle benchmarks in `crysh.research.oracle`.
 The test suite pins ideal-structure values exactly and cross-checks the legacy
 implementation for degenerate cases.
+
+## Tests: three tiers = three install footprints
+
+| tier | directory | needs | command |
+|---|---|---|---|
+| core | `tests/*.py` | `numpy` + `ase` | `pytest tests -q --ignore=tests/tables --ignore=tests/research` |
+| tables | `tests/tables/` | `crysh[tables]` | `pytest tests -q --ignore=tests/research` |
+| research | `tests/research/` | `crysh[research]` | `pytest tests -q` |
+
+A tier that is not installed is never collected — and never silently skipped: the core tier
+imports no pandas/pymatgen/matplotlib at module level, guarded by `tests/test_skeleton.py`
+(which re-collects the core tier in a subprocess with those imports blocked). The controls CN
+reference follows the same rule: `build_all(cn_method="crystalnn")` — the recipe behind the
+frozen `controls_data/labels.yaml` — needs pymatgen and **raises** without it, instead of
+quietly falling back; the dependency-free `"shell"` method has to be requested explicitly, and
+`cn_method` in every label records what was actually used.
 
 ## License
 

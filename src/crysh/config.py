@@ -110,6 +110,12 @@ class MapperConfig:
     l0_thresholds_path / cn_table_path:
         L0 校准阈值与 L3 P(CN|Z) 表的 JSON 路径；``None`` 时用模块默认
         （阈值缺省即 `validity.default_thresholds()`，CN 表缺省即"无表"）。
+    kernel_lam_max:
+        共享邻居表（:mod:`crysh.kernels`）的建表上界 λ；必须 ≥ `lambdas` 的最大值
+        （默认 2.0 = 契约网格上界）。建表一次、按 λ 切多刀。
+    cn_eff_alpha:
+        有效配位数的衰减系数 α，单位 **1/Å**：`cn_eff = Σ_j exp(−α(d_j − d_min))`
+        （默认 2.0，见 `crysh.localenv`；用最近邻距离而非共价半径和作参照）。
     """
 
     scale: str = "2k"
@@ -123,6 +129,8 @@ class MapperConfig:
     cn_table_path: Path | str | None = None
     out_dir: Path | str | None = None
     level_paths: dict[str, Path | str] = field(default_factory=dict)
+    kernel_lam_max: float = 2.0
+    cn_eff_alpha: float = 2.0
 
     # ── 便利访问器（避免调用方到处写 Path(...) / dict.get）──────────────────
     def out_path(self) -> Path | None:

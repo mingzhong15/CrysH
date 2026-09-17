@@ -31,10 +31,17 @@ Label semantics (see labels.yaml ``definitions``; mirrored here)
   are documented Cordero-under-bonding cases (Si, Al, NaCl, CaF2, ...):
   the pilot's Phase-0 pair-calibrated cutoff table is expected to fix them.
 - ``expected_mean_cn``/``expected_cn_min``/``expected_cn_max``/
-  ``expected_cn_hist``: physical coordination numbers.  Primary reference is
-  pymatgen CrystalNN; when CrystalNN raises or disagrees with the hand-set
-  histogram, a documented shell rule (neighbours with d < 1.25*(r_i+r_j)) is
-  used (``cn_method`` field records which).
+  ``expected_cn_hist``: physical coordination numbers, produced by the CN
+  reference method *selected explicitly* (``cn_method`` argument of
+  ``build_all()``; resolution in :func:`resolve_cn_method`) and recorded
+  verbatim in the ``cn_method`` label.  Two methods exist:
+  ``"crystalnn"`` (default == the recipe the shipped ``labels.yaml`` was
+  generated with: pymatgen CrystalNN, plus a documented per-structure fallback
+  to the 1.25x-covalent shell rule when CrystalNN raises or disagrees with the
+  hand-set histogram; needs the ``crysh[research]`` extra) and ``"shell"``
+  (dependency-free 1.25x-covalent shell rule only).  The method is NEVER
+  auto-detected: without pymatgen, asking for ``"crystalnn"`` raises instead of
+  silently degrading (the two methods differ on 8 of the 44 structures).
 - ``expected_validity``: L0 quantities per contracts.md §3.4/§5 (q_min over
   the lambda=1.3 bond set, volume_norm, cell_kappa, aspect_ratio, flags).
 - ``expected_vacuum_gap``: pilot-simple estimate per contracts.md §3.5
@@ -51,7 +58,9 @@ portable: the KT root is derived from ``__file__``; no absolute paths.
 
 from __future__ import annotations
 
+import importlib.util
 import math
+import os
 import warnings
 from pathlib import Path
 
@@ -245,38 +254,104 @@ def _shell_cn(atoms: Atoms) -> np.ndarray:
     return cn
 
 
+# ---------------------------------------------------------------------------
+# CN reference method: explicit, never auto-detected (see resolve_cn_method)
+# ---------------------------------------------------------------------------
+#: 环境变量：显式选择 CN 参考方法（``"crystalnn"`` / ``"shell"``，大小写不敏感）。
+#: 这是本库唯一读的环境变量，且它只选一个参考方法，不牵涉路径 / 工作区布局
+#: （对照 crysh/__init__ 的"库不认识工作区"约定）。
+CN_METHOD_ENV = "CRYSH_CN_METHOD"
+CN_METHOD_CRYSTALNN = "crystalnn"
+CN_METHOD_SHELL = "shell"
+CN_METHODS = (CN_METHOD_CRYSTALNN, CN_METHOD_SHELL)
+#: ``build_all()`` 的默认 CN 参考方法 == 冻结 labels.yaml 的生成口径（需 pymatgen）。
+#: 不装 pymatgen 的环境请显式选 ``"shell"``（参数或环境变量），不要靠隐式回退。
+DEFAULT_CN_METHOD = CN_METHOD_CRYSTALNN
+
+
+def _pymatgen_available() -> bool:
+    """CrystalNN 参考方法唯一的可选依赖是否可用（只查 spec，不 import）。"""
+    return importlib.util.find_spec("pymatgen") is not None
+
+
+def resolve_cn_method(cn_method: str | None = None) -> str:
+    """把 CN 参考方法解析成确定值：参数 > ``$CRYSH_CN_METHOD`` > ``DEFAULT_CN_METHOD``。
+
+    2026-09-17：这里以前是**隐式探测**（有 pymatgen 就用 CrystalNN，没有就悄悄退回
+    1.25x 壳层法），于是同一个 ``build_all()`` 在有/无 pymatgen 的机器上给出不同的
+    CN —— 44 个控制结构里有 8 个的 CN 直方图不同，而 ``cn_method`` 只能事后看出
+    差别。现在方法必须显式选定、并如实写进 label。
+    """
+    for source, raw in (("cn_method", cn_method),
+                        (f"${CN_METHOD_ENV}", os.environ.get(CN_METHOD_ENV) or None),
+                        ("DEFAULT_CN_METHOD", DEFAULT_CN_METHOD)):
+        if raw is None:
+            continue
+        method = str(raw).strip().lower()
+        if method not in CN_METHODS:
+            raise ValueError(
+                f"未知 CN 参考方法 {raw!r}（来自 {source}）；可选 {CN_METHODS}")
+        return method
+    raise AssertionError("DEFAULT_CN_METHOD 必须是 CN_METHODS 之一")
+
+
+def _crystalnn_unavailable_error() -> ImportError:
+    """缺 pymatgen（或装了一半）时的统一报错：直接给出可执行的下一步。"""
+    return ImportError(
+        "CN 参考方法 'crystalnn'（默认值，也是冻结 labels.yaml 的生成口径）需要 "
+        "pymatgen：pip install 'crysh[research]'。不装它请显式选不依赖可选包的壳层法："
+        "build_all(cn_method='shell') 或 CRYSH_CN_METHOD=shell"
+        "（两者在 8/44 个控制结构上 CN 不同，壳层法不复现 labels.yaml 的 CN）。"
+    )
+
+
 def _crystalnn_cn(atoms: Atoms):
-    """CrystalNN CN per site; None on failure (vacuum boxes can break it)."""
-    try:
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
+    """CrystalNN CN per site; None when CrystalNN itself fails on this cell."""
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        # import 在内部 try 之外：缺 pymatgen 是**环境**问题（要显式报错），不能和
+        # "这个 cell 上 CrystalNN 崩了"（有文档的逐结构回退）混为一谈。
+        # 两个 try 分开：import 失败 → 环境错误；构建/推理失败 → 返回 None。
+        try:
             from pymatgen.analysis.local_env import CrystalNN
             from pymatgen.io.ase import AseAtomsAdaptor
+        except ImportError as exc:  # 含 find_spec 看不见的"半装"命名空间包
+            raise _crystalnn_unavailable_error() from exc
+        try:
             struct = AseAtomsAdaptor.get_structure(atoms)
             cnn = CrystalNN()
             cns = [int(round(cnn.get_cn(struct, k)))
                    for k in range(len(struct))]
-        return np.array(cns, dtype=int)
-    except Exception:
-        return None
+        except Exception:
+            return None
+    return np.array(cns, dtype=int)
 
 
-def _cn_reference(atoms: Atoms, hand_hist: dict[int, int]):
-    """Physical CN reference + the method that produced it.
+def _hist_int(cn: np.ndarray) -> dict[int, int]:
+    return {int(k): int(v) for k, v in zip(*np.unique(cn, return_counts=True))}
 
-    Decision rule (documented): trust CrystalNN when it succeeds AND matches
-    the hand-set histogram; otherwise fall back to the 1.25x covalent shell
-    rule when that matches the hand histogram; otherwise keep the CrystalNN
-    value and flag it as unverified.
-    """
-    hist = dict(hand_hist)
+
+def _shell_reference(atoms: Atoms, hist: dict[int, int]):
+    """显式选定的壳层法（无任何可选依赖）。"""
+    shell = _shell_cn(atoms)
+    got = _hist_int(shell)
+    if got == hist:
+        return shell, "shell_1.25", None
+    return shell, "shell_1.25_unverified", (
+        f"explicit shell rule (d < 1.25*(r_i+r_j)) gave {got} != hand-set "
+        f"physical histogram {hist}; value kept but flagged as unverified."
+    )
+
+
+def _crystalnn_reference(atoms: Atoms, hist: dict[int, int]):
+    """CrystalNN 参考 + 有文档的**逐结构**回退规则（不是环境回退）。"""
     cns = _crystalnn_cn(atoms)
     if cns is not None:
-        got = {int(k): int(v) for k, v in zip(*np.unique(cns, return_counts=True))}
+        got = _hist_int(cns)
         if got == hist:
             return cns, "CrystalNN", None
         shell = _shell_cn(atoms)
-        got_shell = {int(k): int(v) for k, v in zip(*np.unique(shell, return_counts=True))}
+        got_shell = _hist_int(shell)
         if got_shell == hist:
             return shell, "shell_1.25_fallback", (
                 f"CrystalNN gave {got} which disagrees with the hand-set "
@@ -288,7 +363,7 @@ def _cn_reference(atoms: Atoms, hand_hist: dict[int, int]):
             "value kept but flagged as unverified."
         )
     shell = _shell_cn(atoms)
-    got_shell = {int(k): int(v) for k, v in zip(*np.unique(shell, return_counts=True))}
+    got_shell = _hist_int(shell)
     if got_shell == hist:
         return shell, "shell_1.25_fallback", (
             "CrystalNN failed on this cell; documented 1.25x-covalent shell "
@@ -298,6 +373,21 @@ def _cn_reference(atoms: Atoms, hand_hist: dict[int, int]):
         f"CrystalNN failed and the shell rule gave {got_shell} != hand-set "
         f"{hist}; value kept but flagged as unverified."
     )
+
+
+def _cn_reference(atoms: Atoms, hand_hist: dict[int, int],
+                  cn_method: str | None = None):
+    """Physical CN reference + the method that produced it（方法显式选定）。
+
+    ``"crystalnn"`` 缺 pymatgen 时**报错**，不再静默退回壳层法。
+    """
+    method = resolve_cn_method(cn_method)
+    hist = {int(k): int(v) for k, v in dict(hand_hist).items()}
+    if method == CN_METHOD_SHELL:
+        return _shell_reference(atoms, hist)
+    if not _pymatgen_available():
+        raise _crystalnn_unavailable_error()
+    return _crystalnn_reference(atoms, hist)
 
 
 def _vacuum_gap_estimate(atoms: Atoms) -> float:
@@ -763,14 +853,21 @@ def _build_low_coordination() -> list[dict]:
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
-def build_all() -> list[tuple[str, Atoms, dict]]:
+def build_all(cn_method: str | None = None) -> list[tuple[str, Atoms, dict]]:
     """Deterministically build all control structures with full labels.
 
     Returns list[(structure_id, atoms, expected)] where ``expected`` mirrors
     the per-structure entry written to ``controls/data/labels.yaml``
     (identical content; floats rounded identically).  Idempotent and
     reproducible: no RNG, no external data.
+
+    ``cn_method``: CN 参考方法，``"crystalnn"``（默认，需 pymatgen，== 冻结
+    labels.yaml 的口径）或 ``"shell"``（无可选依赖）。``None`` 时按
+    ``$CRYSH_CN_METHOD`` → :data:`DEFAULT_CN_METHOD` 解析（见
+    :func:`resolve_cn_method`）。选定值原样写进每条 label 的 ``cn_method``；
+    方法不可用时直接报错，不做隐式回退。
     """
+    method = resolve_cn_method(cn_method)  # 整批一次解析：早失败 + 全批同方法
     records: list[dict] = []
     for builder in (
             _build_dense_bulk, _build_layered_bulk, _build_explicit_vacuum_slab,
@@ -784,7 +881,7 @@ def build_all() -> list[tuple[str, Atoms, dict]]:
     for rec in records:
         atoms: Atoms = rec["atoms"]
         spectrum = _ref_dim_spectrum(atoms)
-        cn, cn_method, cn_warn = _cn_reference(atoms, rec["hand_cn_hist"])
+        cn, cn_used, cn_warn = _cn_reference(atoms, rec["hand_cn_hist"], method)
         validity = _validity_reference(atoms)
         vacuum = _vacuum_gap_estimate(atoms)
         notes = [rec["note"]]
@@ -813,7 +910,7 @@ def build_all() -> list[tuple[str, Atoms, dict]]:
             "expected_cn_min": int(cn.min()),
             "expected_cn_max": int(cn.max()),
             "expected_cn_hist": _hist(cn),
-            "cn_method": cn_method,
+            "cn_method": cn_used,
             "expected_site_geometries": rec["expected_site_geometries"],
             "expected_validity": dict(validity),
             "expected_vacuum_gap": round(vacuum, 3),
@@ -847,10 +944,12 @@ def _labels_definitions() -> dict:
                 "Where ['1.00'] != expected_d_star the structure is a "
                 "documented Cordero under-bonding case.",
             "expected_mean_cn":
-                "Physical CN reference: pymatgen CrystalNN when it succeeds "
-                "and matches the hand-set histogram; else documented "
-                "1.25x-covalent shell rule (d < 1.25*(r_i+r_j)); cn_method "
-                "records which.",
+                "Physical CN reference produced by the explicitly selected CN "
+                "method (build_all(cn_method=...) / $CRYSH_CN_METHOD): "
+                "'crystalnn' = pymatgen CrystalNN when it succeeds and matches "
+                "the hand-set histogram; else documented 1.25x-covalent shell "
+                "rule (d < 1.25*(r_i+r_j)); 'shell' = that shell rule only. "
+                "cn_method records the method actually used, per structure.",
             "expected_validity":
                 "L0 quantities per contracts.md §3.4/§5: q_min over the "
                 "lambda=1.3 bond set (fallback 1.5), volume_norm "
@@ -890,19 +989,57 @@ def labels_payload(records: list | None = None) -> dict:
     return {"meta": meta, "structures": structures}
 
 
+class _PyYamlAdapter:
+    """把 PyYAML 包成与 ruamel `YAML(typ="safe")` 同形（都提供 `.load(str|stream)`）。
+
+    两个后端的 API 不一致（PyYAML 的 `load()` 需要显式 Loader、ruamel 不需要），
+    实测踩过 `TypeError: load() missing 1 required positional argument: 'Loader'`；
+    适配一次，调用点就不用分支。
+    """
+
+    @staticmethod
+    def load(text):
+        import yaml as _pyyaml
+
+        return _pyyaml.safe_load(text)
+
+
+def _yaml_loader():
+    """YAML 后端：ruamel 优先（写回时保留手写排版），退回 PyYAML。
+
+    两者都没有 → 明确报错指向 extra（`pip install crysh[controls]`），不让调用方猜。
+    """
+    try:
+        from ruamel.yaml import YAML
+
+        return YAML(typ="safe")
+    except ImportError:
+        try:
+            import yaml  # noqa: F401
+        except ImportError as exc:  # pragma: no cover
+            raise ImportError(
+                "读取 controls 标签需要 YAML 后端：pip install ruamel.yaml 或 PyYAML"
+            ) from exc
+        return _PyYamlAdapter()
+
+
+def _read_labels_text() -> str:
+    return LABELS_PATH.read_text(encoding="utf-8")
+
+
 def load_labels() -> dict:
     """Load controls/data/labels.yaml (returns the full dict)."""
-    from ruamel.yaml import YAML
-    yaml = YAML(typ="safe")
-    with open(LABELS_PATH, encoding="utf-8") as fh:
-        return dict(yaml.load(fh))
+    return dict(_yaml_loader().load(_read_labels_text()))
 
 
-def write_assets(force: bool = False) -> dict:
-    """Write structures/*.vasp + labels.yaml. Returns a small summary dict."""
+def write_assets(force: bool = False, cn_method: str | None = None) -> dict:
+    """Write structures/*.vasp + labels.yaml. Returns a small summary dict.
+
+    ``cn_method`` 同 :func:`build_all`（重新生成冻结资产时请显式给定口径）。
+    """
     import ase.io
 
-    records = build_all()
+    records = build_all(cn_method=cn_method)
     STRUCTURES_DIR.mkdir(parents=True, exist_ok=True)
     written = []
     for sid, atoms, expected in records:
@@ -912,7 +1049,12 @@ def write_assets(force: bool = False) -> dict:
         ase.io.write(path, atoms, format="vasp", direct=True)
         written.append(path.name)
     payload = labels_payload(records)
-    from ruamel.yaml import YAML
+    try:
+        from ruamel.yaml import YAML
+    except ImportError as exc:  # pragma: no cover - 由 extra 声明覆盖
+        raise ImportError(
+            "写回 labels.yaml 需要 ruamel.yaml（保留手写排版）："
+            "pip install 'crysh[controls]'") from exc
     yaml = YAML()
     yaml.default_flow_style = False
     yaml.width = 4096
@@ -925,14 +1067,18 @@ def write_assets(force: bool = False) -> dict:
 # ---------------------------------------------------------------------------
 # Figures (mandatory >=3, PNG 300 dpi, axis labels + titles)
 # ---------------------------------------------------------------------------
-def make_figs(out_dir: Path | None = None) -> list[Path]:
+def make_figs(out_dir: Path | None = None,
+              cn_method: str = CN_METHOD_SHELL) -> list[Path]:
+    """三张 mandatory 图。默认用无依赖的 CN 方法：图里只用与 CN 无关的字段
+    （family / natom / vacuum / d_star），没必要为出图拉 pymatgen。
+    """
     import matplotlib
     matplotlib.use("Agg", force=True)
     import matplotlib.pyplot as plt
 
     out_dir = Path(out_dir) if out_dir is not None else FIG_DIR
     out_dir.mkdir(parents=True, exist_ok=True)
-    records = build_all()
+    records = build_all(cn_method=cn_method)
     fams = [e["family"] for _, _, e in records]
     natom = np.array([e["natom"] for _, _, e in records], dtype=float)
     vol_per_atom = np.array(
@@ -1021,8 +1167,17 @@ def make_figs(out_dir: Path | None = None) -> list[Path]:
     return [p1, p2, p3]
 
 
-def _main() -> None:
-    summary = write_assets(force=True)
+def _main(argv: list[str] | None = None) -> None:
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        prog="python -m crysh.controls",
+        description="重建 controls 资产（structures/*.vasp + labels.yaml + 图）。")
+    parser.add_argument("--cn-method", default=None, choices=list(CN_METHODS),
+                        help=f"CN 参考方法（默认 {DEFAULT_CN_METHOD}，"
+                             f"即冻结 labels.yaml 的口径；{CN_METHOD_SHELL} 无需 pymatgen）")
+    args = parser.parse_args(argv)
+    summary = write_assets(force=True, cn_method=args.cn_method)
     figs = make_figs()
     print(f"controls: wrote {summary['n_structures']} structures -> "
           f"{summary['structures_dir']}")

@@ -6,8 +6,14 @@ on:
   pull_request:
   workflow_dispatch:
 
+# 三层测试：**目录即边界**（见 tests/tables/conftest.py、tests/research/conftest.py）
+#   core      tests/ 根目录        只装 numpy + ase（+ dev 里的 pytest/ruff/PyYAML）
+#   tables    + tests/tables/      需 pandas/pyarrow            → crysh[tables]
+#   research  + tests/research/    需 pymatgen/matplotlib       → crysh[research]
+# 每个 job **只装自己那一档** extra：这样"只装核心依赖也能全绿"是被真测过的，
+# 而不是靠"反正上层的 job 也跑了"。
 jobs:
-  # ① 核心：只装 numpy + ase —— 这是库的"最小可用面"，必须永远绿。
+  # ① 核心：numpy + ase —— 库的最小可用面，必须永远绿，且绝不 import 重依赖。
   core:
     runs-on: ubuntu-latest
     strategy:
@@ -19,16 +25,28 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install (core + dev)
+      - name: Install (core + dev only)
         run: |
           python -m pip install --upgrade pip
           python -m pip install -e ".[dev]"
+      - name: Assert no optional deps are present
+        run: |
+          python - <<'PY'
+          import importlib.util as u
+          heavy = [m for m in ("pandas", "pyarrow", "pymatgen", "matplotlib", "ruamel")
+                   if u.find_spec(m) is not None]
+          if heavy:
+              raise SystemExit(f"core job 里出现了可选依赖: {heavy}")
+          print("core job: numpy + ase only")
+          PY
       - name: Lint (ruff)
         run: ruff check src tests
-      - name: Test (core only, no optional deps)
+      - name: Test (core tier)
         run: pytest tests -q --ignore=tests/tables --ignore=tests/research
 
-  # ② 表格层：+ pandas/pyarrow（records 落盘、字号 fixture 构造）
+  # ② 表格层：+ pandas/pyarrow（records 落盘、字号 fixture 构造）。
+  # controls 的 CN 参考方法在这一档必须**显式**选 "shell"：默认的 "crystalnn"
+  # （= 冻结 labels.yaml 的口径）需要 pymatgen，缺了会直接 ImportError。
   tables:
     runs-on: ubuntu-latest
     steps:
@@ -40,10 +58,19 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -e ".[dev,tables]"
+      - name: Assert research-only deps are absent
+        run: |
+          python - <<'PY'
+          import importlib.util as u
+          heavy = [m for m in ("pymatgen", "matplotlib") if u.find_spec(m) is not None]
+          if heavy:
+              raise SystemExit(f"tables job 里出现了 research 依赖: {heavy}")
+          print("tables job: no pymatgen / matplotlib")
+          PY
       - name: Test (tables tier)
         run: pytest tests -q --ignore=tests/research
 
-  # ③ 研究层：+ pymatgen/matplotlib（oracle 对照、出图）
+  # ③ 研究层：+ pymatgen/matplotlib（oracle 对照、出图、冻结 labels 的复现）。
   research:
     runs-on: ubuntu-latest
     steps:
@@ -55,5 +82,5 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -e ".[dev,research]"
-      - name: Test (research tier)
+      - name: Test (all tiers)
         run: pytest tests -q

@@ -42,7 +42,8 @@ from crysh.morphology import morphology, morphology_with_diagnostics
 from crysh.tokens import motif_tokens
 from crysh.validity import apply_filters, default_thresholds, validity_metrics
 
-__all__ = ["map_structure", "map_record", "run_structure", "run_batch"]
+__all__ = ["map_structure", "map_record", "run_structure", "map_sites",
+           "run_batch", "SITE_SUMMARY_COLUMNS"]
 
 _CN_TABLE_CACHE: dict[str, dict | None] = {}
 _THRESHOLDS_CACHE: dict[str, dict | None] = {}
@@ -225,6 +226,53 @@ def make_mock_records(*args, **kwargs):  # pragma: no cover - 兼容壳
     from crysh.dev import make_synthetic_records
 
     return make_synthetic_records(*args, **kwargs)
+
+
+#: site 级汇总列（**additive**：不并入冻结的 `RECORD_COLUMNS`，由调用方决定何时入库）
+SITE_SUMMARY_COLUMNS = (
+    "p_cn_mean", "shell_conf_mean", "shell_conf_low_frac", "cn_eff_mean",
+    "cn_shell_agree_frac", "cn_species_top", "d_i_mean", "d_i_max",
+)
+
+
+def map_sites(atoms: Atoms, cfg: MapperConfig | None = None, *,
+              graph=None, coord=None, geometry_labels: list[str] | None = None
+              ) -> tuple[list, dict[str, Any]]:
+    """L3 的 site 级结果（m 实例）+ 结构级汇总（**增量，不动冻结 schema**）。
+
+    返回 `(sites, summary)`：
+
+    - `sites`：:class:`crysh.localenv.SiteEnvironment` 列表（逐位点）；
+    - `summary`：键见 `SITE_SUMMARY_COLUMNS`，可直接拼到 records 行的**新增列**上。
+
+    为什么不直接塞进 record：`RECORD_COLUMNS` 是冻结契约（59 列，已写进集群上的
+    全量 L0–L5 产物）。往契约里加列要连带改 schema 版本、reader 与下游 UI——那是
+    计划里的 M4。这里先把数据算出来并以明确的键交付，由调用方决定何时并入。
+    """
+    cfg = cfg or MapperConfig()
+    from crysh.localenv import local_environments
+
+    envs = local_environments(atoms, cfg, graph=graph, coord=coord,
+                              geometry_labels=geometry_labels)
+    if not envs:
+        return envs, {k: float("nan") for k in SITE_SUMMARY_COLUMNS}
+
+    conf = np.array([e.shell_conf for e in envs], dtype=float)
+    d_i = np.array([e.d_i for e in envs], dtype=float)
+    agree = np.array([e.cn == e.cn_shell for e in envs], dtype=bool)
+    species = Counter(e.cn_species for e in envs)
+    summary = {
+        "p_cn_mean": float(np.mean([e.p_cn for e in envs])),
+        "shell_conf_mean": float(np.mean(conf)),
+        # "低置信位点占比"：shell_conf < 0.3（几何清晰但 λ 持久度低的量级）
+        "shell_conf_low_frac": float(np.mean(conf < 0.3)),
+        "cn_eff_mean": float(np.mean([e.cn_eff for e in envs])),
+        "cn_shell_agree_frac": float(np.mean(agree)),
+        "cn_species_top": species.most_common(1)[0][0],
+        "d_i_mean": float(np.mean(d_i)),
+        "d_i_max": float(np.max(d_i)),
+    }
+    return envs, summary
 
 
 def _write_outputs(records: list[dict[str, Any]], sides: list[dict[str, Any]],

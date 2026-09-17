@@ -53,15 +53,41 @@ _CENTER_CN_MIN = 4    # 中心原子 CN 下限（polyhedra 中心）
 _PLANAR_CENTER_GEO = frozenset({"trigonal_planar"})
 
 
-def _neighbor_sets(graph, n_atoms: int) -> list[set[int]]:
-    """邻接集合（去重；i==j 的跨周期自像保留为同元素邻居）。"""
+def _neighbor_sets(graph, n_atoms: int) -> list[list[tuple[int, int, int, int]]]:
+    """逐位点邻居表：`[(邻居索引, Sx, Sy, Sz), ...]`，**去重口径与 `coord.cn` 一致**。
+
+    必须同时做对两件事（两次踩坑记录，2026-09-17）：
+
+    1. **保留周期像**。原实现收进 `set[int]`，只按原子索引去重——离子晶体里同一个
+       邻居出现在多个周期像中（NaCl：6 个 Cl 近邻是同一个 Cl 索引的不同像），
+       6 邻居被压成 1。实测 44 个 ground-truth 结构里 **19 个**受影响：L3 化学串
+       从 `Cl6` 写成 `Cl1`、`h_neigh` 恒 0、多面体共享判据丢边。
+    2. **按 (索引, 平移) 去重，且双向只留一条**。被对称化两次会把邻居数翻倍
+       （diamond Si 会写成 `Si8`）。这里与 :func:`crysh.coord._count_cn` 用同一套
+       键：正向 `(j, S)` 与反向 `(i, -S)` 合并后 `np.unique`，故
+       `len(nbrs[a]) == coord.cn[a]` 对任意结构成立（有测试钉住）。
+
+    返回的平移是**反向**的（`-S`）：`(b, T)` 表示 b 位于 `pos[b] + T·cell`。
+    这一点对共享判据至关重要——两个多面体"共享同一个配体"要求的是**同一个空间位置**，
+    必须把平移算进去（金刚石本来有 corner-sharing，只看原子索引会判成 isolated）。
+
+    契约影响：l3 token 的**格式不变**（`Z|CN|geom|chem`），变的是化学串取值——
+    修的是错值，不是 schema。
+    """
     i = np.asarray(graph.i, dtype=np.int64).ravel()
     j = np.asarray(graph.j, dtype=np.int64).ravel()
-    nbrs: list[set[int]] = [set() for _ in range(n_atoms)]
-    for a, b in zip(i.tolist(), j.tolist()):
-        nbrs[a].add(b)
-        if b != a:
-            nbrs[b].add(a)
+    S = np.asarray(graph.S, dtype=np.int64).reshape(-1, 3)
+    if i.size == 0:
+        return [[] for _ in range(n_atoms)]
+    same = i == j
+    fwd = np.column_stack([i, j, S])
+    rev = np.column_stack([j, i, -S])[~same]
+    keys = np.unique(np.vstack([fwd, rev]), axis=0)
+
+    nbrs: list[list[tuple[int, int, int, int]]] = [[] for _ in range(n_atoms)]
+    for a, b, sx, sy, sz in keys.tolist():
+        # 键里的 S 是"j 相对 i"的平移；存成"邻居 b 相对 a"的位置平移（取负）
+        nbrs[a].append((b, -sx, -sy, -sz))
     return nbrs
 
 
@@ -122,6 +148,7 @@ def motif_tokens(atoms, graph, coord, geometry_labels: list[str],
 
     nbrs = _neighbor_sets(graph, n_atoms)
 
+
     # ---- 逐原子 token + h_neigh ----
     l1: list[str] = []
     l2: list[str] = []
@@ -131,7 +158,7 @@ def motif_tokens(atoms, graph, coord, geometry_labels: list[str],
         sym = symbols[a]
         c = int(cn[a])
         geo = str(geometry_labels[a])
-        hist = Counter(symbols[b] for b in nbrs[a])
+        hist = Counter(symbols[b[0]] for b in nbrs[a])
         hist_str = "".join(f"{el}{hist[el]}" for el in sorted(hist))
         base = f"{sym}|{c}"
         l1.append(base)
@@ -156,9 +183,17 @@ def motif_tokens(atoms, graph, coord, geometry_labels: list[str],
         c >= _CENTER_CN_MIN or (c == 3 and str(g) in _PLANAR_CENTER_GEO)
         for c, g in zip(cn.tolist(), geometry_labels)
     ]
+    # ---- 多面体共享：中心对 × 共享配体数（口径与修订前一致）----
+    # v1.3-L5 门槛：CN≥4，或 CN==3 且 geometry label 为 "trigonal_planar"
+    # （BO₃/CO₃ 平面三角形中心，见 _PLANAR_CENTER_GEO）。
+    #
+    # 说明（2026-09-17 修订）：`nbrs` 现在是 (索引, 平移) 列表且**已按 coord.cn 的
+    # 口径去重**（同一原子的多个周期像若都成键则算多个邻居）。共享计数沿用原来的
+    # "按公共邻居数分档"逻辑——把它改成几何位置归组会同时改变 mock 图的语义与
+    # 已冻结的 sharing 取值，收益不抵风险（见 CHANGELOG 的"未改"记录）。
     pair_shared: Counter[tuple[int, int]] = Counter()
     for lig in range(n_atoms):
-        centers = [b for b in nbrs[lig] if b != lig and is_center[b]]
+        centers = sorted({b[0] for b in nbrs[lig] if b[0] != lig and is_center[b[0]]})
         if len(centers) < 2:
             continue
         for idx in range(len(centers)):

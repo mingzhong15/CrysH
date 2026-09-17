@@ -56,6 +56,31 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **controls 的 CN 参考方法改为显式选定**：`build_all(cn_method=...)`，可用
+  `$CRYSH_CN_METHOD` 覆盖，默认 `crystalnn`（= 冻结 `labels.yaml` 的口径）。此前是隐式
+  探测：有 pymatgen 用 CrystalNN、没有就悄悄退回 1.25x 壳层法，而 44 个控制结构里有 8 个
+  的 CN 因此随环境而变。现在缺 pymatgen 时请求 `crystalnn` 直接 `ImportError`（指向
+  `crysh[research]`），无依赖的 `shell` 必须显式请求，实际用的方法如实写进每条 label 的
+  `cn_method`；`write_assets`/CLI 也接受 `--cn-method`。（这是 0.1.0"零环境变量"的唯一
+  例外：该变量只选参考方法，不牵涉任何路径/工作区。）
+- 测试分三层（目录即边界），CI 拆成 core / tables / research 三个 job，各自**只装**自己
+  那一档 extra：core 只装 `.[dev]`（并断言 pandas/pyarrow/pymatgen/matplotlib 确实不在），
+  tables 装 `.[dev,tables]`，research 装 `.[dev,research]`。
+- `research` extra 改为 `crysh[tables,controls]` + pymatgen/matplotlib（重算资产需要 ruamel）；
+  `dev` 带 PyYAML，使 core/tables 档也能读 `controls_data/labels.yaml`。
+
+### Fixed
+
+- `tests/tables/test_controls.py::test_labels_match_recomputed_references` 在无 pymatgen 的
+  干净环境里失败（重算得 `shell_1.25_fallback` != 冻结的 `CrystalNN`）。一致性测试按口径
+  拆开：与 CN 无关的字段留在 tables 档（显式 `shell` 重算），完整复现 CrystalNN 口径
+  `labels.yaml` 的测试移到 `tests/research/test_controls_labels.py`，并断言方法分布
+  （42 × `CrystalNN` + 2 × `shell_1.25_fallback`）。
+- 核心档新增守卫：`tests/test_skeleton.py` 在屏蔽 pandas/pyarrow/pymatgen/matplotlib 的
+  子进程里重新收集 core 档，根目录测试再也无法悄悄拉重依赖。
+
 ### Planned for v0.2.0
 
 - `localenv`：motif 实例 `m = (Z, CN, geometry, neighbour chemistry, distortion)`

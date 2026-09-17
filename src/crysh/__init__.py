@@ -22,7 +22,9 @@
 - **核心轻依赖**：只 numpy + ase。pandas/pyarrow（写表）与 pymatgen/matplotlib
   （研究工具）在 `crysh[tables]` / `crysh[research]` 里。
 - **库不认识工作区**：输出路径一律经 :class:`crysh.config.MapperConfig` 显式传入，
-  库内不读环境变量、不推测目录布局。
+  不推测目录布局。全库只读一个环境变量 ``CRYSH_CN_METHOD``：它只选
+  ``crysh.controls`` 的 CN 参考方法（等价于 ``build_all(cn_method=...)``，参数优先），
+  与路径 / 工作区布局无关。
 - **列名与 token 是数据契约**：见 :mod:`crysh.config`（列）与 :mod:`crysh.tokens`（token）。
 
 模块地图
@@ -44,7 +46,7 @@ from crysh.config import (
     MapperConfig,
 )
 from crysh.metrics import accumulation, effective_diversity, novel_gain, richness
-from crysh.records import map_record, map_structure, run_batch
+from crysh.records import SITE_SUMMARY_COLUMNS, map_record, map_sites, map_structure, run_batch
 from crysh.tokens import SHARING_CLASSES, TOKEN_LEVELS, motif_tokens
 
 __version__ = "0.1.0.dev0"
@@ -61,7 +63,9 @@ __all__ = [
     # 主流程
     "map_record",
     "map_structure",
+    "map_sites",
     "run_batch",
+    "SITE_SUMMARY_COLUMNS",
     # token 与词表统计
     "motif_tokens",
     "TOKEN_LEVELS",
