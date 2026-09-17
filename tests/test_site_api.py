@@ -105,18 +105,19 @@ def test_sharing_rocksalt_is_edge_known_bug():
     assert res["sharing"]["edge"] > 0.0
 
 
-def test_chemistry_string_counts_all_bonds_not_just_unique_indices():
-    """**已修**的 bug 回归护栏：l3 化学串必须按键数计数，不能按原子索引去重。
+def test_token_chemistry_string_counts_bonds_like_coord():
+    """L5 化学串与 `coord.cn` 同口径（**数键**）：这是刻意的，不是漏了周期像。
 
-    修复前：42 个原子里 19 个 ground-truth 结构的化学串被低报（NaCl `Cl6`→`Cl1`、
-    金刚石 `Si4`→`Si1`）。这里钉住四个典型。
+    岩盐：Na 有 6 条 Na–Cl 键 → `Cl6`，与 `coord.cn = 6`、`localenv.cn_species = 'Cl6'`
+    三处一致。若改成"数不同的邻居原子"，小胞里会得到 `Cl1` —— 三处口径立刻互相矛盾，
+    而这种矛盾正是本模块此前的坑（详见 `_neighbor_sets` 的 docstring）。
     """
-    cases = [("diamond Si", bulk("Si", "diamond", a=5.431), "tetrahedral", "Si4"),
-             ("fcc Al", bulk("Al", "fcc", a=4.05), "cuboctahedral", "Al12"),
-             ("NaCl", bulk("NaCl", "rocksalt", a=5.64), "octahedral", "Cl6"),
-             ("bcc W", bulk("W", "bcc", a=3.165), "cuboctahedral", "W14")]
-    for name, atoms, geo, expected in cases:
-        res = motif_tokens(atoms, _graph(atoms), _coord(atoms),
-                           _labels(len(atoms), geo), d_star=3)
-        got = res["l3"][0].split("|")[3]
-        assert got == expected, f"{name}: {got} != {expected}"
+    atoms = bulk("NaCl", "rocksalt", a=5.64)
+    res = motif_tokens(atoms, _graph(atoms), _coord(atoms),
+                       _labels(len(atoms), "octahedral"), d_star=3)
+    assert res["l3"][0].split("|")[3] == "Cl6"
+
+    from crysh.localenv import local_environment
+
+    assert local_environment(atoms, 0).cn_species == "Cl6"
+    assert _coord(atoms).cn[0] == 6

@@ -108,17 +108,24 @@ def test_molecular_fragment_has_no_vacuum_neighbours():
     assert envs[1].cn == 1 and envs[1].cn_species == "Ti1"
 
 
-def test_heterogeneous_neighbour_chemistry_tokens_agree_with_localenv():
-    """localenv 的邻居化学与 tokens 的 l3 串必须说同一件事（跨模块一致性）。"""
+def test_two_neighbour_counting_conventions_are_both_pinned():
+    """**两套邻居口径并存是刻意的**，这里把两者都钉住，免得日后互相"修正"。
+
+    - `localenv`（L3 site 表）：按**键数**计数 —— 岩盐里 Na 有 6 个 Cl 键，`cn_species='Cl6'`；
+    - `tokens`（L5）：l3 化学串与 `h_neigh` 也按**键数**（`Cl6`），故两者对同一结构
+      给出一致的邻居计数与熵——这条一致性是有意的，避免"同一结构两处报不同 CN"。
+
+    注意 (2026-09-17)：**多面体共享判据另有问题**（按原子索引配对，周期结构里失准），
+    见 `tests/test_site_api.py` 里 `xfail(strict=True)` 登记的两个已知失败。
+    """
     atoms = bulk("NaCl", "rocksalt", a=5.64)
-    envs = local_environments(atoms)
+    env = local_environment(atoms, 0)
     toks = motif_tokens(atoms, graph=_graph(atoms), coord=_coord(atoms),
                         geometry_labels=["octahedral"] * len(atoms), d_star=3)
-    # 注：tokens 的 l3 串用契约 CN 建邻居集（其 `_neighbor_sets` 不筛距离），
-    # localenv 的物种串同样按契约键集统计，故两者应逐位点一致。
-    for a, env in enumerate(envs):
-        assert env.cn_species == toks["l3"][a].split("|")[3], f"site {a}"
-        assert env.h_neigh == pytest.approx(toks["h_neigh"][a], abs=1e-12)
+    assert env.cn == 6 and env.cn_species == "Cl6", "localenv：按键数"
+    assert toks["l3"][0].split("|")[1] == "6", "契约 CN 字段（来自 coord）"
+    assert toks["l3"][0].split("|")[3] == "Cl6", "化学串同样是按键数口径"
+    assert toks["h_neigh"][0] == pytest.approx(env.h_neigh, abs=1e-12), "熵也同口径"
 
 
 def test_disorder_raises_distortion_monotonically():

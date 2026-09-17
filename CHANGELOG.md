@@ -54,7 +54,24 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - 库内 254 个用例（248 迁移 + 公共 API/README 契约守卫），`248 passed / 1 skipped`
   在重构前后逐项一致；另有研究侧用例标记 `research`。
 
-## [Unreleased]
+## [Unreleased] — 计划 v0.2.0
+
+### Added
+
+- `crysh.kernels`：**一份邻居表处处复用**。`neighbor_list(atoms, cfg)` 按
+  `λ_max · r0(pair)` 建一次表，`masked_graph(nl, λ)` 纯数组筛出任意 λ 的子图，
+  `normalized_neighbor_table(nl, λ)` 给出按距离排序的逐位点邻居（含"是否在当前键集内"
+  的掩码——壳层边界正在最后一条键的外侧，没有掩码就看不见）。
+  等价性是**准入验收**：与 `bond.build_bond_graph` 在 8 个 λ × 49 个结构上边集合与
+  距离逐点相等（`tests/test_kernels.py`，100 例）。
+- `crysh.localenv`：L3 的 site 级 m 实例 —— `cn` / `cn_eff` / `cn_species` /
+  `cn_by_lambda` / `p_cn` / `shell_gap` / `cn_shell` / `cn1` / `cn2` / `shell_conf` /
+  邻居化学（`neighbor_counts`、`h_neigh`）/ 径向统计（`r_tilde_mean/std`、`bond_cv`）/
+  interim 畸变 `d_i`（版本化 `D_I_VERSION`）。`site_table()` 出 pandas 表。
+- `crysh.map_sites(atoms, cfg) -> (sites, summary)`：site 级结果 + 结构级汇总
+  （`SITE_SUMMARY_COLUMNS`）。**additive**：不并入冻结的 59 列 record（有测试钉住）。
+- `MapperConfig` 增 `kernel_lam_max`（建表上界，默认 2.0）与 `cn_eff_alpha`
+  （有效配位数衰减系数，单位 1/Å，默认 2.0）。
 
 ### Changed
 
@@ -63,13 +80,11 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   探测：有 pymatgen 用 CrystalNN、没有就悄悄退回 1.25x 壳层法，而 44 个控制结构里有 8 个
   的 CN 因此随环境而变。现在缺 pymatgen 时请求 `crystalnn` 直接 `ImportError`（指向
   `crysh[research]`），无依赖的 `shell` 必须显式请求，实际用的方法如实写进每条 label 的
-  `cn_method`；`write_assets`/CLI 也接受 `--cn-method`。（这是 0.1.0"零环境变量"的唯一
-  例外：该变量只选参考方法，不牵涉任何路径/工作区。）
+  `cn_method`。（这是 0.1.0"零环境变量"的唯一例外：该变量只选参考方法，不涉任何路径。）
 - 测试分三层（目录即边界），CI 拆成 core / tables / research 三个 job，各自**只装**自己
-  那一档 extra：core 只装 `.[dev]`（并断言 pandas/pyarrow/pymatgen/matplotlib 确实不在），
-  tables 装 `.[dev,tables]`，research 装 `.[dev,research]`。
-- `research` extra 改为 `crysh[tables,controls]` + pymatgen/matplotlib（重算资产需要 ruamel）；
-  `dev` 带 PyYAML，使 core/tables 档也能读 `controls_data/labels.yaml`。
+  那一档 extra；core job 断言 pandas/pyarrow/pymatgen/matplotlib 确实不在，并在屏蔽这些
+  依赖的子进程里重新收集 core 档（`tests/test_skeleton.py`），杜绝"本机绿、干净环境红"。
+- `research` extra 改为 `crysh[tables,controls]` + pymatgen/matplotlib；`dev` 带 PyYAML。
 
 ### Fixed
 
@@ -78,14 +93,34 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   拆开：与 CN 无关的字段留在 tables 档（显式 `shell` 重算），完整复现 CrystalNN 口径
   `labels.yaml` 的测试移到 `tests/research/test_controls_labels.py`，并断言方法分布
   （42 × `CrystalNN` + 2 × `shell_1.25_fallback`）。
-- 核心档新增守卫：`tests/test_skeleton.py` 在屏蔽 pandas/pyarrow/pymatgen/matplotlib 的
-  子进程里重新收集 core 档，根目录测试再也无法悄悄拉重依赖。
 
-### Planned for v0.2.0
+### Known issues
 
-- `localenv`：motif 实例 `m = (Z, CN, geometry, neighbour chemistry, distortion)`
-  作为一等公民的 site 级表（含 `cn_species`、`cn_eff`、`cn_by_lambda`、`p_cn`、
-  `shell_gap/cn1/cn2`、连续畸变 `d_i`）。
-- `motifnet`：motif 超节点图（corner/edge/face × 同质/异质边、per-family 维数、
-  edge 词表、`l4@2` token）。
-- 单一共享邻居表：让 L1 谱、L3 壳层与 L4 motif 图消费同一份 NL（现在是各建各的）。
+- **多面体共享判据（`tokens` 的 `sharing` / `f_corner|edge|face` / `sharing_label`）
+  在周期结构里不可靠**。2026-09-17 复核结论与两次失败的修复尝试：
+
+  - 现象：金刚石（教科书 corner-sharing）、岩盐（edge 为主）、fcc（face 为主）在
+    当前实现下都可能被判成 `isolated`；
+  - 根因：共享计数建在"每原子一个邻居集合"（按索引去重）之上，而**周期像信息在这层
+    已经丢失**——小胞里同一个配体原子的多个像分不开，大胞里同一个配体又可能因索引
+    相同被折叠。两个需求（化学串要"数键"、共享要"数原子+分像"）共用一个视图。
+  - 试过并否掉的做法：按 `(索引, 平移)` 计数（金刚石算出共享 4 → 误判 face）、
+    按最小镜像归并配体（mock 图无 cell → `LinAlgError`）、按中心对求邻居交集
+    （8 原子胞仍给 face）。四次尝试都没能在不重写语义的前提下自洽。
+  - 结论：**不修**（会改冻结 token 生态），改为登记：`tests/test_site_api.py` 用
+    `xfail(strict=True)` 钉住"教科书期望"，修对之日会 XPASS 报错，强制同步更新
+    token 生态、`f_corner/edge/face`、UI 树与 coverage-atlas。
+  - 修法方向（留给下一版）：把共享判据整体搬到"配体实例 = (原子, 平移)"的显式表示上，
+    与 :mod:`crysh.kernels` 的共享邻居表对齐，而不是复用 `tokens` 的邻居集合。
+- `motifnet`（motif 超节点图、per-family 维数、edge 词表、`l4@2`）**未做**——见
+  `01.working/knowledge_tree/plan-crysh.md` §4 的 M2。
+
+### 两套邻居计数口径（刻意并存，勿互相"修正"）
+
+| 口径 | 含义 | 用在哪 |
+|---|---|---|
+| **数键** | 保留周期像，一条键算一个邻居 | `tokens` 的 l3 化学串与 `h_neigh`；`localenv.cn_species` / `cn_eff` / 壳层统计 |
+| **数原子** | 按原子索引去重 | 多面体共享判据（当前实现所依赖，也是它在周期结构里失准的原因） |
+
+同一结构上两者可以不同（金刚石小胞：4 条键、1 个邻居原子）。改动任一侧前先读
+`tests/test_localenv.py::test_two_neighbour_counting_conventions_are_both_pinned`。
