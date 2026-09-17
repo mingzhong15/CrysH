@@ -107,6 +107,9 @@ class MapperConfig:
     level_paths:
         逐级 parquet 路径表（`{"L0": Path, ...}`）；供 records 组装时**按需回读**。
         Mapping 而非固定布局 —— 库不假设 `<root>/levelN-*/data/`。
+    l0_thresholds_path / cn_table_path:
+        L0 校准阈值与 L3 P(CN|Z) 表的 JSON 路径；``None`` 时用模块默认
+        （阈值缺省即 `validity.default_thresholds()`，CN 表缺省即"无表"）。
     """
 
     scale: str = "2k"
@@ -116,6 +119,8 @@ class MapperConfig:
     env_cutoff_table_path: Path | str | None = None
     rcore_table_path: Path | str | None = None
     cn_table: dict | None = None
+    l0_thresholds_path: Path | str | None = None
+    cn_table_path: Path | str | None = None
     out_dir: Path | str | None = None
     level_paths: dict[str, Path | str] = field(default_factory=dict)
 
@@ -128,6 +133,10 @@ class MapperConfig:
         """某一级的 parquet 路径；未配置则 None。"""
         p = self.level_paths.get(level)
         return Path(p) if p is not None else None
+
+    def lambda_cols(self) -> dict[float, str]:
+        """本次配置的 λ → 列名（跟随 `lambdas`，不跟随全局 `LAMBDA_COLS`）。"""
+        return {lam: lambda_col(lam) for lam in self.lambdas}
 
     def with_scale(self, scale: str) -> MapperConfig:
         """返回同参数、换规模标签的新配置（dataclass 不可变风格用法）。"""
