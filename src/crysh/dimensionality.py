@@ -1,7 +1,7 @@
 """Periodic dimensionality spectrum d(lambda) — CKT Level 1.
 
 For every cutoff multiplier lambda, the periodic bond graph is built
-(``ckt.bond``). Each connected component is traversed by BFS and every node
+(``crysh.dimensionality``). Each connected component is traversed by BFS and every node
 is assigned a cumulative lattice translation ``t`` in Z^3 (``t[root] = 0``,
 ``t[v] = t[u] + S`` along a tree edge ``(u, v, S)``). A non-tree edge
 ``(u, v, S)`` yields the cycle translation ``T = t[u] + S - t[v]``.
@@ -40,19 +40,16 @@ contracts.md §3.3.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from pathlib import Path
 
 import numpy as np
 
-from ckt.bond import BondGraph, build_bond_graph
-
-from .paths import KT_ROOT  # noqa: F401  (KT 工作目录，见 paths.py)
+from crysh.bond import BondGraph, build_bond_graph
+from crysh.config import D_STAR_LAMBDA, LAMBDAS  # λ 网格与 λ* 口径的唯一真源
 
 # Integrator decision v1.1: interim canonical bond scale. The bare covalent
 # sum (lam=1.00) systematically under-bonds (diamond Si q=1.06; 40% zero-CN
 # sites on subset_2k; oracle: 131 metallic structures fast-0D vs Larsen-3D).
 # Superseded by the Phase-0 pair-cutoff calibration table when it lands.
-D_STAR_LAMBDA = 1.20
 
 
 @dataclass
@@ -152,7 +149,7 @@ def _graph_dim_and_components(g: BondGraph, component_stats: bool = False) -> tu
 
 
 def dimensionality_spectrum(atoms, cutoff_table=None,
-                            lambdas=(0.90, 1.00, 1.10, 1.20, 1.35, 1.50, 1.75, 2.00),
+                            lambdas=LAMBDAS,
                             d_star_lambda: float | None = None) -> DimensionSpectrum:
     """Compute the d(lambda) dimensionality spectrum of a structure.
 
@@ -187,7 +184,7 @@ def dimensionality_spectrum(atoms, cutoff_table=None,
       40% zero-CN sites on subset_2k; Phase-0 table supersedes).
     An explicitly passed ``d_star_lambda`` must be contained in ``lambdas``.
     """
-    from ckt.bond import load_env_table
+    from crysh.bond import load_env_table
     if cutoff_table is None:
         cutoff_table = load_env_table()
     if d_star_lambda is None:

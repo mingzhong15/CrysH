@@ -6,7 +6,7 @@
 约定：
 - 近邻集合 = ASE natural_cutoffs × 1.3（per-atom 半径式 cutoff：包含当且仅当
   d_ij < c_i + c_j，即 d_ij < 1.3·(r_cov_i + r_cov_j)），与 build_bond_graph(lam=1.3)
-  的边集合等价；本模块**不 import ckt.bond**（level1 并行开发中），直接使用
+  的边集合等价；本模块**不 import crysh.bond**（level1 并行开发中），直接使用
   ase.neighborlist。
 - q_ij = d_ij / (r_cov_i + r_cov_j)，r_cov 取 ase.data.covalent_radii。
 - 无近邻（孤立结构）时 q_min = +inf、n_overlap_pairs = 0（无重叠可判）。
@@ -39,8 +39,6 @@ from ase import Atoms
 from ase.data import covalent_radii
 from ase.neighborlist import natural_cutoffs, neighbor_list
 
-from .paths import KT_ROOT  # noqa: F401  (KT 工作目录，见 paths.py)
-
 # --- 契约 §5 pilot 默认阈值 -----------------------------------------------------
 DEFAULT_Q_C = 0.85
 DEFAULT_VOLUME_NORM_BOUNDS = (0.5, 10.0)
@@ -54,7 +52,7 @@ NEIGHBOR_MULT = 1.3
 CORE_SEARCH_CUTOFF = 2.0
 
 # 内置 r_core 默认表（OpenMX DFT_DATA19 PBE19，ab22d 项目逐元素 VPS 选择）
-_RCORE_DEFAULT_PATH = Path(__file__).resolve().parent / "data" / "rcore_openmx_v1.json"
+_RCORE_DEFAULT_PATH = Path(__file__).resolve().parent / "tables" / "rcore_openmx_v1.json"
 ENV_RCORE_TABLE = "CKT_RCORE_TABLE"
 
 METRIC_KEYS = (

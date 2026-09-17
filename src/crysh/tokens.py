@@ -7,7 +7,7 @@
     l3: "Ti|6|oct|O6"                 + 邻居元素直方图（符号字母序 + 计数拼接）
     l4: "Ti|6|oct|O6|edge|2D"         + sharing_label + d_star（"0D".."3D"）
 
-依赖注入（duck typing，本模块不 import ckt.bond/ckt.coord/ckt.geometry）：
+依赖注入（duck typing，本模块不 import crysh.bond/crysh.coord/crysh.geometry）：
   * graph  — 契约 BondGraph（§3.2，v1.1：**双向邻接**，含 (i,j,S) 与 (j,i,-S) 两方向）：
     只需 .i/.j（int 数组，(E,)）与可选 .n_atoms；本模块用 set 对称化去重，双向图安全。
   * coord  — 契约 CoordResult（§3.6）：只需 .cn（(N,) int）
@@ -22,7 +22,7 @@
     BO₃ 硼酸盐 / CO₃ 碳酸盐网络的 corner-sharing 在纯 CN≥4 门槛下**完全不可见**
     （B/C 的 CN 恒为 3 → 这类网络的 sharing 恒 isolated）；linear（CN=2）与 CN=3
     的 "other"/"ambiguous"（T 形等）仍排除——只有确认的平面三角形才算多面体中心。
-  * d_star：每次调用 try import ckt.dimension，可用则用 dimensionality_spectrum(atoms).d_star
+  * d_star：每次调用 try import crysh.bond，可用则用 dimensionality_spectrum(atoms).d_star
     真值（v1.1：d_star = d(λ=1.20)）；任何 import/计算失败则保守取 3（"3D"，已文档化）。
   * h_neigh = −Σ x_a ln x_a（邻居元素比例熵，单元素=0，无邻居=0）。
   * 邻居直方图始终附计数（"F2O4"，即使计数=1 也写 "…1"），保证 token 可逆无歧义；
@@ -66,16 +66,15 @@ def _neighbor_sets(graph, n_atoms: int) -> list[set[int]]:
 
 
 def _resolve_d_star(atoms) -> int:
-    """d_star 真值（try import ckt.dimension）；失败保守取 3（"3D"，已文档化）。"""
-    try:
-        from ckt.dimension import dimensionality_spectrum
-    except Exception:
-        return 3
-    try:
-        d = dimensionality_spectrum(atoms).d_star
-        return int(d)
-    except Exception:
-        return 3
+    """d_star 真值（来自 :mod:`crysh.dimensionality`）。
+
+    R2 之前这里是 `try: from crysh.dimensionality import ... except: return 3`：
+    模块改名后 import 一直失败，于是**每个结构的 l4 token 都静默写成 "3D"**。
+    现在直接调用同包实现，只在真正算不出来时抛错（不再吞异常）。
+    """
+    from crysh.dimensionality import dimensionality_spectrum
+
+    return int(dimensionality_spectrum(atoms).d_star)
 
 
 def motif_tokens(atoms, graph, coord, geometry_labels: list[str],
@@ -94,7 +93,7 @@ def motif_tokens(atoms, graph, coord, geometry_labels: list[str],
         逐原子 geometry label，长度必须等于原子数。
     d_star : int | None
         预计算的维度真值（v1.1 集成者增补，向后兼容）。None 时内部调
-        ``ckt.dimension.dimensionality_spectrum`` 计算（每结构多算整个 λ 谱，
+        ``crysh.dimensionality.dimensionality_spectrum`` 计算（每结构多算整个 λ 谱，
         批量调用方如 pipeline 应传入已算好的值以避免重复计算）。
 
     Returns

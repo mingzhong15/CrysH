@@ -64,9 +64,14 @@ from ase.neighborlist import neighbor_list
 # ---------------------------------------------------------------------------
 # Paths (portable: derived from this file's location)
 # ---------------------------------------------------------------------------
-from .paths import KT_ROOT, LEVELS_DIR  # noqa: F401  (工作目录 / 各级数据根，见 paths.py)
+from crysh.config import (
+    LAMBDAS_STAR as LAMBDAS,  # 6 点子网格（见 config 与 labels.yaml 的 expected_short_lambda_dim）
+)
+from crysh.paths import LEVELS_DIR  # 研究工程布局（仅默认值；R4 起由调用方显式传入）
+
 # 2026-09-17：controls 整体搬到 code/levels/controls/ → 数据随模块走，不按工作目录拼
-DATA_DIR = LEVELS_DIR / "controls" / "data"
+#: ground-truth 资产随库分发（labels.yaml + 44 个 POSCAR），不再依赖研究工作区布局
+DATA_DIR = Path(__file__).resolve().parent / "controls_data"
 STRUCTURES_DIR = DATA_DIR / "structures"
 LABELS_PATH = DATA_DIR / "labels.yaml"
 FIG_DIR = LEVELS_DIR / "controls" / "fig"
@@ -90,7 +95,6 @@ GEOMETRY_LABELS = [
     "other", "ambiguous",
 ]
 # contracts.md §3.3
-LAMBDAS = (0.90, 1.00, 1.10, 1.20, 1.35, 1.50)
 # contracts.md §5
 Q_C = 0.85
 VOL_NORM_RANGE = (0.5, 10.0)

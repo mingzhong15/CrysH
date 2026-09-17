@@ -15,7 +15,7 @@ FINGERPRINT_COLUMNS (order FROZEN — 53 columns as of v1.3-L4):
               dim_persistence, n_components
     L2 (10):  vacuum_gap, vacuum_fraction, surface_score, n_layers, span,
               f_max, cn_std, vacuum_score, slab_score, mono_score
-              (the last three are the v3 soft-gate scores of ckt.morphology;
+              (the last three are the v3 soft-gate scores of crysh.morphology;
                records produced before v3 simply leave them NaN)
     L3  (5):  mean_cn, low_cn_fraction, high_cn_fraction, cn_min, cn_max
     L4 (16):  geom_ambiguous_fraction, geom_cnt_<label> for each of the 15
@@ -56,7 +56,7 @@ import numpy as np
 import pandas as pd
 
 try:  # contracts §3.7 frozen order — single source of truth
-    from ckt.geometry import GEOMETRY_LABELS  # type: ignore
+    from crysh.geometry import GEOMETRY_LABELS  # type: ignore
 
     _GEOMETRY_LABELS: list[str] = list(GEOMETRY_LABELS)
 except ImportError:  # pragma: no cover - level4 always merged in practice
@@ -162,7 +162,7 @@ def build_fingerprint_matrix(records: pd.DataFrame) -> tuple[np.ndarray, list[st
     Returns (X, columns): X is (N, len(FINGERPRINT_COLUMNS)) float64 with NaN
     for missing values; `columns` lists the columns actually usable — columns
     that are NaN in EVERY row are dropped (a warning is printed, e.g. the v3
-    soft-gate scores on records produced before ckt.morphology v3).
+    soft-gate scores on records produced before crysh.morphology v3).
     """
     n = len(records)
     X = np.empty((n, len(FINGERPRINT_COLUMNS)), dtype=np.float64)

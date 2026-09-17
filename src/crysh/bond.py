@@ -5,7 +5,7 @@ structure. Every edge carries a periodic translation vector ``S`` in Z^3:
 the head atom ``j`` sits in the cell image ``j + S . cell`` relative to the
 tail atom ``i``. Summing ``S`` along any graph cycle yields the cycle's net
 lattice translation ``T``; the rank over Q of the set of cycle translations
-is the network dimensionality (computed in ``ckt.dimension``).
+is the network dimensionality (computed in ``crysh.dimensionality``).
 
 Ownership: level1-dimensionality (contracts.md §2). Signatures frozen in
 contracts.md §3.2 — do not change without the integrator.
@@ -22,8 +22,6 @@ import numpy as np
 from ase import Atoms
 from ase.data import covalent_radii
 from ase.neighborlist import neighbor_list
-
-from .paths import KT_ROOT  # noqa: F401  (KT 工作目录，见 paths.py)
 
 # v1.2: env var pointing to the Phase-0 calibration table json. When set,
 # `canonical_bond_graph` (and dimensionality_spectrum's auto path) use the
@@ -210,11 +208,11 @@ def canonical_bond_graph(atoms, cutoff_table: dict | None = None) -> BondGraph:
       lam=D_STAR_LAMBDA)`` (covalent sum x 1.20).
 
     ``d_star`` convention follows automatically in
-    ``ckt.dimension.dimensionality_spectrum`` (1.00 with table, D_STAR_LAMBDA
+    ``crysh.dimensionality.dimensionality_spectrum`` (1.00 with table, D_STAR_LAMBDA
     otherwise).
     """
     table = cutoff_table if cutoff_table is not None else load_env_table()
     if table:
         return build_bond_graph(atoms, cutoff_table=table, lam=1.0)
-    from ckt.dimension import D_STAR_LAMBDA  # lazy: dimension imports bond
+    from crysh.config import D_STAR_LAMBDA
     return build_bond_graph(atoms, cutoff_table=None, lam=D_STAR_LAMBDA)

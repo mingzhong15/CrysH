@@ -37,57 +37,57 @@ from ase import Atoms
 from ase.data import atomic_numbers, covalent_radii
 from ase.io import read as ase_read
 
-from ckt.schema import LAMBDA_COLS, RECORD_COLUMNS
+from crysh.config import LAMBDA_COLS, RECORD_COLUMNS
 
-from .paths import KT_ROOT, LEVELS_DIR  # noqa: F401  (工作目录 / 各级数据根，见 paths.py)
+from crysh.paths import KT_ROOT, LEVELS_DIR  # noqa: F401  (工作目录 / 各级数据根，见 paths.py)
 LAMBDAS = tuple(LAMBDA_COLS.keys())
 
 # ---------------------------------------------------------------------------
 # 真模块探测（开发期大部分模块未合入 → ImportError → mock）
 # ---------------------------------------------------------------------------
 try:
-    from ckt.validity import apply_filters as _real_apply_filters
-    from ckt.validity import validity_metrics as _real_validity_metrics
+    from crysh.validity import apply_filters as _real_apply_filters
+    from crysh.validity import validity_metrics as _real_validity_metrics
     _HAVE_L0 = True
 except ImportError:  # pragma: no cover - 真模块合入前的常态
     _HAVE_L0 = False
 
 try:
-    from ckt.bond import build_bond_graph as _real_build_bond_graph
+    from crysh.bond import build_bond_graph as _real_build_bond_graph
     _HAVE_BOND = True
 except ImportError:  # pragma: no cover
     _HAVE_BOND = False
 
 try:
-    from ckt.dimension import dimensionality_spectrum as _real_dimensionality_spectrum
+    from crysh.dimensionality import dimensionality_spectrum as _real_dimensionality_spectrum
     _HAVE_L1 = True
 except ImportError:  # pragma: no cover
     _HAVE_L1 = False
 
 try:
-    from ckt.morphology import morphology as _real_morphology
+    from crysh.morphology import morphology as _real_morphology
     # v1.3-L2：诊断扩展键（span/n_layers/f_max/cn_std/vacuum_*/slab_*/mono_* score）
-    from ckt.morphology import morphology_with_diagnostics as _real_morph_diag
+    from crysh.morphology import morphology_with_diagnostics as _real_morph_diag
     _HAVE_L2 = True
 except ImportError:  # pragma: no cover
     _HAVE_L2 = False
     _real_morph_diag = None
 
 try:
-    from ckt.coord import coordination as _real_coordination
+    from crysh.coord import coordination as _real_coordination
     _HAVE_L3 = True
 except ImportError:  # pragma: no cover
     _HAVE_L3 = False
 
 try:
-    from ckt.geometry import classify_geometry as _real_classify_geometry
-    from ckt.geometry import geometry_features as _real_geometry_features
+    from crysh.geometry import classify_geometry as _real_classify_geometry
+    from crysh.geometry import geometry_features as _real_geometry_features
     _HAVE_L4 = True
 except ImportError:  # pragma: no cover
     _HAVE_L4 = False
 
 try:
-    from ckt.tokenize import motif_tokens as _real_motif_tokens
+    from crysh.tokens import motif_tokens as _real_motif_tokens
     _HAVE_L5 = True
 except ImportError:  # pragma: no cover
     _HAVE_L5 = False
@@ -123,7 +123,7 @@ def _default_cn_table() -> dict | None:
         name = "cn_table_v1.json" if s == "2k" else f"cn_table_{s}.json"
         path_s = str(LEVELS_DIR / "level3-coordination" / "data" / name)
     try:
-        from ckt.coord import load_cn_table
+        from crysh.coord import load_cn_table
         _CN_TABLE = load_cn_table(path_s)
         print(f"[pipeline] L3 cn_table 已加载: {path_s}", file=sys.stderr)
     except Exception:
@@ -740,7 +740,7 @@ def _run_levels(atoms: Atoms, cutoff_table: dict | None = None,
     graph = None
     if _HAVE_BOND:
         try:
-            from ckt.bond import canonical_bond_graph
+            from crysh.bond import canonical_bond_graph
             graph = canonical_bond_graph(atoms, cutoff_table)
         except Exception:
             graph = None

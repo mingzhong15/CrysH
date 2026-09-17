@@ -37,3 +37,6 @@ htmlcov/
 # Local scratch
 scratch/
 *.log
+
+# 重构期的本地备份（R2 用；不属库内容）
+.backup/

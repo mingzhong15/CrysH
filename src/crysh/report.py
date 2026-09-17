@@ -7,7 +7,7 @@
 
 数据本地化：`records_parquet` 两种模式——
   1. figdata 模式：传 `figdata/atlas` 目录（含 records_lite.parquet + side.json，
-     由 ckt.figdata.export_atlas 在数据侧/集群产出）→ 本地零大 parquet 依赖；
+     由 crysh.figdata.export_atlas 在数据侧/集群产出）→ 本地零大 parquet 依赖；
   2. 全量 parquet 模式（集群/数据侧）：直接读 records_2k.parquet + pipeline
      侧文件（<stem>_{cn_counts,geom_counts,l3_tokens}.parquet）。
 侧聚合缺失时退回基于 elements 列 + 典型 CN 表的确定性合成（图中标注
@@ -20,16 +20,14 @@ from __future__ import annotations
 import json
 from collections import Counter
 from pathlib import Path
-from typing import Any
 
+import matplotlib
 import numpy as np
 import pandas as pd
 
-import matplotlib
 matplotlib.use("Agg")  # 保险（env.sh 已设 MPLBACKEND=Agg）
 import matplotlib.pyplot as plt
 
-from .paths import KT_ROOT  # noqa: F401  (KT 工作目录，见 paths.py)
 _DPI = 300
 
 _DIM_LABELS = {0: "0D", 1: "1D", 2: "2D", 3: "3D"}
@@ -67,7 +65,7 @@ class _SideData:
         self.n_rare_structs = n_rare_structs
 
     @classmethod
-    def from_parquet(cls, records_parquet: Path) -> "_SideData":
+    def from_parquet(cls, records_parquet: Path) -> _SideData:
         side = _side(records_parquet, "_cn_counts.parquet")
         cn = pd.read_parquet(side) if side.exists() else None
         side = _side(records_parquet, "_geom_counts.parquet")
@@ -86,7 +84,7 @@ class _SideData:
         return cls(cn, geom, tokens, rare, n_rare)
 
     @classmethod
-    def from_json(cls, side_json: Path) -> "_SideData":
+    def from_json(cls, side_json: Path) -> _SideData:
         d = json.loads(Path(side_json).read_text(encoding="utf-8"))
         cn = pd.DataFrame(d["cn_counts"], columns=["element", "cn", "count"]) \
             if d["cn_counts"] else None
@@ -116,7 +114,7 @@ def _atlas_inputs(fig_source: Path, lite_path: Path | None = None,
         lite = fig_source / "records_lite.parquet"
         if not lite.is_file():
             raise FileNotFoundError(
-                f"{lite} 不存在 —— 先运行 `python -m ckt.figdata export-atlas`")
+                f"{lite} 不存在 —— 先运行 `python -m crysh.figdata export-atlas`")
         df = pd.read_parquet(lite)
         side_json = fig_source / "side.json"
         side = _SideData.from_json(side_json) if side_json.is_file() else _SideData()
@@ -439,7 +437,7 @@ def filter_waterfall(records_parquet: Path, out_dir: Path,
                        f"carry ≥1 rare L3 token")
     else:
         ax_r.text(0.5, 0.5, "rare-token side data unavailable\n"
-                            "(run `python -m ckt.figdata export-atlas`\n"
+                            "(run `python -m crysh.figdata export-atlas`\n"
                             " or pipeline.run_batch to produce side data)",
                   ha="center", va="center", fontsize=9, transform=ax_r.transAxes)
         ax_r.set_axis_off()

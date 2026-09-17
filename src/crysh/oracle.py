@@ -9,7 +9,7 @@ Contract: contracts.md §3.9. This module owns the "oracle-bench" subtask.
 
 Design notes
 ------------
-* pymatgen / matplotlib are imported lazily inside functions: ``import ckt.oracle``
+* pymatgen / matplotlib are imported lazily inside functions: ``import crysh.oracle``
   stays cheap, and workers only pay the import cost once per process.
 * A single bad structure can never kill a batch: every component is wrapped in
   try/except and recorded in the ``oracle_error`` column (per §3.9).
@@ -22,8 +22,8 @@ Design notes
 from __future__ import annotations
 
 import json
-import os
 import math
+import os
 import warnings
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
@@ -31,7 +31,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from .paths import KT_ROOT  # noqa: F401  (KT 工作目录，见 paths.py)
+from crysh.paths import KT_ROOT  # noqa: F401  (KT 工作目录，见 paths.py)
 
 DIM_LABELS = ["0D", "1D", "2D", "3D"]
 DIM_VALUES = (0, 1, 2, 3)
@@ -108,11 +108,11 @@ def run_chemenv(atoms) -> list[tuple[str, float]]:
         structure = _ase_to_structure(atoms)
         if len(structure) != n_sites:  # adaptor sanity (should never happen)
             return failed
-        from pymatgen.analysis.chemenv.coordination_environments.coordination_geometry_finder import (
-            LocalGeometryFinder,
-        )
         from pymatgen.analysis.chemenv.coordination_environments.chemenv_strategies import (
             SimplestChemenvStrategy,
+        )
+        from pymatgen.analysis.chemenv.coordination_environments.coordination_geometry_finder import (
+            LocalGeometryFinder,
         )
 
         lgf = LocalGeometryFinder()
@@ -445,7 +445,7 @@ def _cn_lambda_worker(chunk, lambdas) -> list[dict]:
     symbols(list)}. A failing structure/lambda is skipped (recorded as error)."""
     from ase.io import read
 
-    from ckt.bond import build_bond_graph
+    from crysh.bond import build_bond_graph
 
     rows = []
     for sid, path in chunk:
@@ -477,7 +477,7 @@ def _cn_lambda_scan(manifest_or_folder, oracle_parquet: Path,
     """Per-atom fast-CN vs CrystalNN-CN table for a lambda grid.
 
     Long-form DataFrame: structure_id, lam, larsen_dim, symbol, fast_cn,
-    oracle_cn (one row per atom per lambda, site-aligned). Uses ckt.bond's
+    oracle_cn (one row per atom per lambda, site-aligned). Uses crysh.dimensionality's
     v1.1 bidirectional graph (default covalent table) for the fast CN; the
     oracle CN comes from an oracle parquet produced by batch_oracle.
     """

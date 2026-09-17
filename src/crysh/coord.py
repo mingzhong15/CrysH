@@ -52,18 +52,13 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
 from ase.data import atomic_numbers
 
-try:  # level1 未合入时的注解占位；本模块只做 duck typing，不依赖具体类
-    from ckt.bond import BondGraph  # type: ignore[import-not-found]
-except ImportError:  # pragma: no cover
-    class BondGraph:  # type: ignore[no-redef]
-        """level1 未合入时的注解占位。"""
+from crysh.bond import BondGraph  # 键图类型（同包，直接依赖）
 
-from .paths import KT_ROOT  # noqa: F401  (KT 工作目录，见 paths.py)
 
 LOW_PERCENTILE = 0.05
 HIGH_PERCENTILE = 0.95
@@ -108,7 +103,7 @@ def _count_cn(i, j, S, n_atoms) -> np.ndarray:
     return np.bincount(keys[:, 0], minlength=n_atoms).astype(np.int64)
 
 
-def _lookup(mapping: Optional[dict], key: int) -> Any:
+def _lookup(mapping: dict | None, key: int) -> Any:
     """dict 查询：先 int 键后 str(int) 键（兼容 JSON 读入未转换的键）。"""
     if not mapping:
         return None
@@ -117,7 +112,7 @@ def _lookup(mapping: Optional[dict], key: int) -> Any:
     return mapping.get(str(key))
 
 
-def apply_cn_table(Z, cn, cn_table: Optional[dict]) -> np.ndarray:
+def apply_cn_table(Z, cn, cn_table: dict | None) -> np.ndarray:
     """站点级 percentile 查询：p_i = F_{Z_i}(cn_i)；无表/缺 Z/缺 cn 值 → NaN。"""
     Z = np.asarray(Z, dtype=np.int64).ravel()
     cn = np.asarray(cn, dtype=np.int64).ravel()
@@ -174,7 +169,7 @@ def _cell_aliasing_guard(atoms, graph) -> tuple[bool, float]:
     return bool(margin < 1.0), float(margin)
 
 
-def coordination(atoms, graph, cn_table: Optional[dict] = None) -> CoordResult:
+def coordination(atoms, graph, cn_table: dict | None = None) -> CoordResult:
     """契约 §3.6：由键图计算每原子 CN 与元素条件化 percentile 及结构级汇总。
 
     graph：契约 §3.2 BondGraph（或带 .i/.j/.S/.n_atoms 的等价对象）；
@@ -210,7 +205,7 @@ def coordination(atoms, graph, cn_table: Optional[dict] = None) -> CoordResult:
     )
 
 
-def _element_z(sym) -> Optional[int]:
+def _element_z(sym) -> int | None:
     """元素符号 / 原子序数 → int 原子序数（无效返回 None）。"""
     try:
         if isinstance(sym, (int, np.integer)):
@@ -363,7 +358,7 @@ def cn_histogram(cn, n_bins: int = CN_HIST_BINS) -> list[int]:
     return np.bincount(clipped, minlength=n_bins).tolist()
 
 
-def save_cn_table(cn_table: dict, json_path, meta: Optional[dict] = None) -> Path:
+def save_cn_table(cn_table: dict, json_path, meta: dict | None = None) -> Path:
     """写 {Z: {"cdf": {cn: p}, "n": n}} 为 JSON（键转字符串）。
 
     文件结构: ``{"meta": {...}, "table": {"3": {"n": .., "cdf": {"0": .., ...}}, ...}}``

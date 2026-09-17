@@ -5,7 +5,7 @@ Frozen contract: `contracts.md` §3.5 (``MorphologyResult`` / ``morphology`` /
 ``MORPHOLOGY_CLASSES``).  Owner: `level2-morphology`.
 
 Inputs: `graph` / `spectrum` / `coord` are ALWAYS honored as-is when supplied (the
-pipeline passes the ckt.bond graph at D_STAR_LAMBDA=1.2 + the ckt.dimension
+pipeline passes the crysh.dimensionality graph at D_STAR_LAMBDA=1.2 + the crysh.dimensionality
 spectrum).  When they are `None`, level-1 is used if importable (``_PREFER_L1``);
 the module's own deterministic fallback (note 1) is the last-resort stand-alone
 path and never blocks on level-1.
@@ -125,28 +125,19 @@ Implementer's notes — pilot simplifications (all documented)
 
 from __future__ import annotations
 
+import itertools
 from collections import deque
 from dataclasses import dataclass
 from fractions import Fraction
-import itertools
-from pathlib import Path
-from typing import Optional
 
 import numpy as np
+from ase.neighborlist import natural_cutoffs, neighbor_list
 
-from ase.neighborlist import neighbor_list, natural_cutoffs
-
-try:  # level-1 modules may not be merged yet — never block on them
-    from ckt.bond import build_bond_graph as _l1_build_bond_graph  # type: ignore
-    from ckt.dimension import dimensionality_spectrum as _l1_dimension  # type: ignore
-    from ckt.dimension import D_STAR_LAMBDA as _L1_GRAPH_LAM  # type: ignore
-
-    _HAS_L1 = True
-except ImportError:  # pragma: no cover - depends on integration state
-    _HAS_L1 = False
-    _L1_GRAPH_LAM = 1.20  # interim canonical lambda used by the pipeline
-
-from .paths import KT_ROOT  # noqa: F401  (KT 工作目录，见 paths.py)
+# level-1（键图/维数谱）与本模块同包，直接依赖（R2 去掉了"未合入就降级"的分支）
+from crysh.bond import build_bond_graph as _l1_build_bond_graph
+from crysh.config import D_STAR_LAMBDA as _L1_GRAPH_LAM
+from crysh.config import LAMBDAS
+from crysh.dimensionality import dimensionality_spectrum as _l1_dimension
 
 MORPHOLOGY_CLASSES = [
     "dense_bulk",
@@ -162,7 +153,6 @@ MORPHOLOGY_CLASSES = [
     "ambiguous",
 ]
 
-LAMBDAS = (0.90, 1.00, 1.10, 1.20, 1.35, 1.50)
 
 # ---- pilot thresholds (all documented above; calibratable later) ----
 # Gate constants 5 / 0.25 / 12 / 1.6 are PILOT values pending Phase-0/1
@@ -214,7 +204,7 @@ class MorphologyResult:
 
 
 # ---------------------------------------------------------------------------
-# internal fallback containers (duck-type compatible with ckt.bond/dimension)
+# internal fallback containers (duck-type compatible with crysh.dimensionality/dimension)
 # ---------------------------------------------------------------------------
 
 @dataclass
@@ -346,7 +336,7 @@ def _loop_rank_max(graph: _Graph, comp_of) -> int:
         s = np.asarray(s, dtype=np.int64)
         adj[a].append((b, s))
         adj[b].append((a, -s))
-    t: list[Optional[np.ndarray]] = [None] * n
+    t: list[np.ndarray | None] = [None] * n
     best = 0
     for root in range(n):
         if t[root] is not None:
@@ -371,7 +361,7 @@ def _loop_rank_max(graph: _Graph, comp_of) -> int:
 def _spectrum_fallback(atoms) -> _Spectrum:
     """d(λ) spectrum with the fallback table (same λ grid as contract §3.3)."""
     d_by_lambda: dict[float, int] = {}
-    g1: Optional[_Graph] = None
+    g1: _Graph | None = None
     for lam in LAMBDAS:
         g = _build_graph(atoms, lam)
         comp_of, _, _ = _components_fmax(g)
@@ -405,7 +395,7 @@ def _compute_internals(atoms):
     `graph`/`spectrum` explicitly to bypass this path entirely (the pipeline
     does).
     """
-    if _PREFER_L1 and _HAS_L1:
+    if _PREFER_L1:
         try:
             spec = _l1_dimension(atoms)
             gr = _l1_build_bond_graph(atoms, lam=_L1_GRAPH_LAM)  # pipeline-consistent
@@ -737,7 +727,7 @@ def morphology_with_diagnostics(atoms, graph=None, spectrum=None, coord=None) ->
     if graph is None and spectrum is None:
         graph, spectrum, source = _compute_internals(atoms)
     elif graph is None:
-        if _PREFER_L1 and _HAS_L1:
+        if _PREFER_L1:
             try:
                 graph = _l1_build_bond_graph(atoms, lam=_L1_GRAPH_LAM)
                 source = "level1-graph"
@@ -746,7 +736,7 @@ def morphology_with_diagnostics(atoms, graph=None, spectrum=None, coord=None) ->
         else:
             graph, source = _build_graph(atoms, 1.0), "fallback-graph"
     elif spectrum is None:
-        if _PREFER_L1 and _HAS_L1:
+        if _PREFER_L1:
             try:
                 spectrum = _l1_dimension(atoms)
                 source = "level1-spectrum"

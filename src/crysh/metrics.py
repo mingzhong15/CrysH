@@ -1,11 +1,8 @@
-"""Level 5 — diversity/coverage 指标（contracts.md §3.8，签名冻结）。
+"""覆盖度 / 多样性指标：token 词表的整体统计量。
 
-  * richness(counts, n_min=1)          R(D) = |{m : n_m(D) > n_min}|（plan.md §6）
-  * effective_diversity(counts)        D_eff = e^H，H = −Σ p ln p（空集 → 0）
-  * novel_gain(tokens_D, tokens_ref)   |D \\ ref|
-  * accumulation(token_lists, grid)    前缀 richness 曲线（token_lists 按结构顺序）
-
-纯标准库实现，可移植（200M streaming 时 accumulation 可换增量归并，接口不变）。
+与 :mod:`crysh.tokens` 的分工：`tokens` 负责**单个结构**的 token 生成，
+本模块负责**词表级**的 richness / 有效多样性 / 新增覆盖 / 累积曲线。
+两者都只依赖标准库，可安全用于百万级结构的两遍统计。
 """
 
 from __future__ import annotations

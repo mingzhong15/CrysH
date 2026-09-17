@@ -28,7 +28,6 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Optional
 
 __all__ = ["resolve_kt_root", "kt_root", "KT_ROOT", "LEVELS_DIR",
            "WORKING_DIR", "FIGDATA_DIR", "figdata_dir", "SHARED_DIR"]
@@ -42,7 +41,7 @@ MARKER_PAIR = ("plan.md", "progress.md")
 _CACHE: dict = {}
 
 
-def _search_up(start: Path) -> Optional[Path]:
+def _search_up(start: Path) -> Path | None:
     """从 start 向上逐级查找 KT 工作目录标记。"""
     for base in (start, *start.parents):
         try:
@@ -55,7 +54,7 @@ def _search_up(start: Path) -> Optional[Path]:
     return None
 
 
-def resolve_kt_root(kt_root: Optional[os.PathLike | str] = None) -> Path:
+def resolve_kt_root(kt_root: os.PathLike | str | None = None) -> Path:
     """解析 KT 工作目录（Artifact 根）。见模块 docstring 的优先级说明。
 
     Parameters
@@ -137,10 +136,6 @@ def figdata_dir() -> Path:
     return cand if cand.is_dir() else KT_ROOT / "figdata"
 
 
-#: 各级数据根目录（见 :func:`_resolve_levels_dir`）
-LEVELS_DIR = _resolve_levels_dir()
-
-
 def kt_root() -> Path:
     """``resolve_kt_root()`` 的函数式别名（延迟解析，便于测试改环境变量）。"""
     return resolve_kt_root()
@@ -150,8 +145,10 @@ def kt_root() -> Path:
 #: 若运行中会改 ``CKT_ROOT``，请改用 :func:`kt_root`。
 KT_ROOT = resolve_kt_root()
 
-# 下面两个常量依赖 KT_ROOT/RESOLVED 结果，**必须**在 KT_ROOT 之后求值
+# 下面几个常量依赖 KT_ROOT，**必须**在 KT_ROOT 之后求值
 # （2026-09-17 踩坑：放在文件前部会 NameError）。
+#: 各级数据根目录（见 :func:`_resolve_levels_dir`）
+LEVELS_DIR = _resolve_levels_dir()
 #: 跨主题共享产物根（重组前 == KT_ROOT）
 WORKING_DIR = _resolve_working_dir()
 #: figdata 聚合层根（重组前 == KT_ROOT/figdata）

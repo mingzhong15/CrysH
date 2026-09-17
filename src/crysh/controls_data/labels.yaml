@@ -1,0 +1,1705 @@
+meta:
+  version: 1
+  n_structures_hint: 44
+  families:
+  - dense_bulk
+  - layered_bulk
+  - explicit_vacuum_slab
+  - intrinsic_2d_like
+  - chain_solid
+  - isolated_chain
+  - molecular_crystal
+  - isolated_molecule
+  - stretched_layer
+  - high_coordination
+  - low_coordination
+  morphology_classes_source: contracts.md §3.5 (frozen mirror in src/ckt/controls.py)
+  definitions:
+    expected_d_star: Physical ground-truth periodic bonding-network dimensionality of the material (0/1/2/3), independent of any cutoff choice. Finite clusters (incl. finite chains and molecules in boxes) are 0 per contracts.md §3.3.
+    expected_short_lambda_dim: "d(lambda) produced by the frozen default-covalent-table algorithm (contracts.md §3.2/§3.3: edge iff d_ij < lambda*(r_cov_i+r_cov_j) with ASE Cordero covalent radii; self-loops excluded; d = rank of loop-translation vectors per connected component, max over components; rank computed by fixpoint greedy integer basis reduction, verified == real rank). Keys are lambda strings. Where ['1.00'] != expected_d_star the structure is a documented Cordero under-bonding case."
+    expected_mean_cn: 'Physical CN reference: pymatgen CrystalNN when it succeeds and matches the hand-set histogram; else documented 1.25x-covalent shell rule (d < 1.25*(r_i+r_j)); cn_method records which.'
+    expected_validity: 'L0 quantities per contracts.md §3.4/§5: q_min over the lambda=1.3 bond set (fallback 1.5), volume_norm V/sum(4pi/3 r_cov^3), cell_kappa = cond(cell), aspect = max/min cell length; flags with pilot defaults (q_c=0.85, nu in [0.5,10], kappa<=100, aspect<=10).'
+    expected_vacuum_gap: 'Pilot-simple vacuum estimate per contracts.md §3.5 wording: for each lattice-axis projection, largest CIRCULAR gap in fractional coordinate minus covalent radii of the flanking atoms; max over axes, clamped at 0. For a symmetric slab (vacuum on both sides) the circular interval merges the two vacuum regions across the periodic boundary, so the value reports the TOTAL vacuum (2x per-side; per-side values are quoted in the structure notes). Reference magnitude for tests/figures, not the level2 implementation.'
+    expected_site_geometries: Hand-set coordination geometry for inequivalent sites using the frozen GEOMETRY_LABELS of contracts.md §3.7 ('other' = shape not in the list; see notes).
+    notes: Construction details + documented expected-flag / under-bonding behaviour.
+structures:
+  control_dense_bulk_01:
+    family: dense_bulk
+    formula: Si8
+    elements:
+    - Si
+    natom: 8
+    expected_d_star: 3
+    expected_morphology_class: dense_bulk
+    expected_short_lambda_dim:
+      '0.90': 0
+      '1.00': 0
+      '1.10': 3
+      '1.20': 3
+      '1.35': 3
+      '1.50': 3
+    expected_mean_cn: 4.0
+    expected_cn_min: 4
+    expected_cn_max: 4
+    expected_cn_hist:
+      '4': 8
+    cn_method: CrystalNN
+    expected_site_geometries:
+    - site: Si
+      cn: 4
+      geometry: tetrahedral
+    expected_validity:
+      q_min: 1.0593
+      n_overlap_pairs: 0
+      volume_norm: 3.4954
+      cell_kappa: 1.0
+      aspect_ratio: 1.0
+      overlap_flag: false
+      extreme_volume_flag: false
+      pathological_cell_flag: false
+    expected_vacuum_gap: 0.0
+    notes: 'Diamond Si (a=5.431 A). Physical 3D covalent network. Cordero Si-Si cutoff 2.22 A < 2.35 A bond, so the default table under-bonds at lambda<=1.0 (see spectrum). fast_default: d(lambda=1.00)=0 != physical expected_d_star=3 (Cordero covalent radii under-bond; Phase-0 calibrated pair table expected to fix).'
+  control_dense_bulk_02:
+    family: dense_bulk
+    formula: Al4
+    elements:
+    - Al
+    natom: 4
+    expected_d_star: 3
+    expected_morphology_class: dense_bulk
+    expected_short_lambda_dim:
+      '0.90': 0
+      '1.00': 0
+      '1.10': 0
+      '1.20': 3
+      '1.35': 3
+      '1.50': 3
+    expected_mean_cn: 12.0
+    expected_cn_min: 12
+    expected_cn_max: 12
+    expected_cn_hist:
+      '12': 4
+    cn_method: CrystalNN
+    expected_site_geometries:
+    - site: Al
+      cn: 12
+      geometry: cuboctahedral
+    expected_validity:
+      q_min: 1.1834
+      n_overlap_pairs: 0
+      volume_norm: 2.238
+      cell_kappa: 1.0
+      aspect_ratio: 1.0
+      overlap_flag: false
+      extreme_volume_flag: false
+      pathological_cell_flag: false
+    expected_vacuum_gap: 0.0
+    notes: 'fcc Al (a=4.05 A), CN=12 cuboctahedral (v1.3-L4 label). Metallic: default covalent table bonds only at lambda>=1.2. fast_default: d(lambda=1.00)=0 != physical expected_d_star=3 (Cordero covalent radii under-bond; Phase-0 calibrated pair table expected to fix).'
+  control_dense_bulk_03:
+    family: dense_bulk
+    formula: Fe2
+    elements:
+    - Fe
+    natom: 2
+    expected_d_star: 3
+    expected_morphology_class: dense_bulk
+    expected_short_lambda_dim:
+      '0.90': 0
+      '1.00': 3
+      '1.10': 3
+      '1.20': 3
+      '1.35': 3
+      '1.50': 3
+    expected_mean_cn: 8.0
+    expected_cn_min: 8
+    expected_cn_max: 8
+    expected_cn_hist:
+      '8': 2
+    cn_method: CrystalNN
+    expected_site_geometries:
+    - site: Fe
+      cn: 8
+      geometry: cubic
+    expected_validity:
+      q_min: 0.9402
+      n_overlap_pairs: 0
+      volume_norm: 1.2218
+      cell_kappa: 1.0
+      aspect_ratio: 1.0
+      overlap_flag: false
+      extreme_volume_flag: false
+      pathological_cell_flag: false
+    expected_vacuum_gap: 0.0
+    notes: bcc Fe (a=2.866 A); first shell (8, cubic) bonds under the default covalent table already at lambda=1.0.
+  control_dense_bulk_04:
+    family: dense_bulk
+    formula: Cl4Na4
+    elements:
+    - Cl
+    - Na
+    natom: 8
+    expected_d_star: 3
+    expected_morphology_class: dense_bulk
+    expected_short_lambda_dim:
+      '0.90': 0
+      '1.00': 0
+      '1.10': 3
+      '1.20': 3
+      '1.35': 3
+      '1.50': 3
+    expected_mean_cn: 6.0
+    expected_cn_min: 6
+    expected_cn_max: 6
+    expected_cn_hist:
+      '6': 8
+    cn_method: CrystalNN
+    expected_site_geometries:
+    - site: Na
+      cn: 6
+      geometry: octahedral
+    - site: Cl
+      cn: 6
+      geometry: octahedral
+    expected_validity:
+      q_min: 1.0522
+      n_overlap_pairs: 0
+      volume_norm: 1.9
+      cell_kappa: 1.0
+      aspect_ratio: 1.0
+      overlap_flag: false
+      extreme_volume_flag: false
+      pathological_cell_flag: false
+    expected_vacuum_gap: 0.14
+    notes: 'Rocksalt NaCl (a=5.64 A). Ionic: Na-Cl 2.82 A vs Cordero sum 2.68 A -> default table bonds only at lambda>=1.1. fast_default: d(lambda=1.00)=0 != physical expected_d_star=3 (Cordero covalent radii under-bond; Phase-0 calibrated pair table expected to fix).'
+  control_dense_bulk_05:
+    family: dense_bulk
+    formula: O4Ti2
+    elements:
+    - O
+    - Ti
+    natom: 6
+    expected_d_star: 3
+    expected_morphology_class: dense_bulk
+    expected_short_lambda_dim:
+      '0.90': 3
+      '1.00': 3
+      '1.10': 3
+      '1.20': 3
+      '1.35': 3
+      '1.50': 3
+    expected_mean_cn: 4.0
+    expected_cn_min: 3
+    expected_cn_max: 6
+    expected_cn_hist:
+      '3': 4
+      '6': 2
+    cn_method: CrystalNN
+    expected_site_geometries:
+    - site: Ti
+      cn: 6
+      geometry: octahedral
+    - site: O
+      cn: 3
+      geometry: trigonal_planar
+    expected_validity:
+      q_min: 0.8622
+      n_overlap_pairs: 0
+      volume_norm: 1.5959
+      cell_kappa: 1.553
+      aspect_ratio: 1.553
+      overlap_flag: false
+      extreme_volume_flag: false
+      pathological_cell_flag: false
+    expected_vacuum_gap: 0.0
+    notes: 'Rutile TiO2 (a=4.594, c=2.959, u=0.3048): Ti-O 1.95/1.98 A. Bonds at lambda=1.0 under the default table.'
+  control_dense_bulk_06:
+    family: dense_bulk
+    formula: Ca4F8
+    elements:
+    - Ca
+    - F
+    natom: 12
+    expected_d_star: 3
+    expected_morphology_class: dense_bulk
+    expected_short_lambda_dim:
+      '0.90': 0
+      '1.00': 0
+      '1.10': 3
+      '1.20': 3
+      '1.35': 3
+      '1.50': 3
+    expected_mean_cn: 5.3333
+    expected_cn_min: 4
+    expected_cn_max: 8
+    expected_cn_hist:
+      '4': 8
+      '8': 4
+    cn_method: CrystalNN
+    expected_site_geometries:
+    - site: Ca
+      cn: 8
+      geometry: cubic
+    - site: F
+      cn: 4
+      geometry: tetrahedral
+    expected_validity:
+      q_min: 1.0153
+      n_overlap_pairs: 0
+      volume_norm: 1.6713
+      cell_kappa: 1.0
+      aspect_ratio: 1.0
+      overlap_flag: false
+      extreme_volume_flag: false
+      pathological_cell_flag: false
+    expected_vacuum_gap: 0.0
+    notes: 'Fluorite CaF2 (a=5.463 A). Ionic: Ca-F 2.37 A vs Cordero sum 2.33 A -> default table bonds only at lambda>=1.1. fast_default: d(lambda=1.00)=0 != physical expected_d_star=3 (Cordero covalent radii under-bond; Phase-0 calibrated pair table expected to fix).'
+  control_layered_bulk_01:
+    family: layered_bulk
+    formula: C4
+    elements:
+    - C
+    natom: 4
+    expected_d_star: 2
+    expected_morphology_class: layered_bulk
+    expected_short_lambda_dim:
+      '0.90': 0
+      '1.00': 2
+      '1.10': 2
+      '1.20': 2
+      '1.35': 2
+      '1.50': 2
+    expected_mean_cn: 3.0
+    expected_cn_min: 3
+    expected_cn_max: 3
+    expected_cn_hist:
+      '3': 4
+    cn_method: CrystalNN
+    expected_site_geometries:
+    - site: C
+      cn: 3
+      geometry: trigonal_planar
+    expected_validity:
+      q_min: 0.9344
+      n_overlap_pairs: 0
+      volume_norm: 9.5481
+      cell_kappa: 7.703
+      aspect_ratio: 5.447
+      overlap_flag: false
+      extreme_volume_flag: false
+      pathological_cell_flag: false
+    expected_vacuum_gap: 8.53
+    notes: 'Graphite AB 2L (a=2.46, c=13.40): in-plane C-C 1.42 A; interlayer 3.35 A never bonds at lambda<=1.5 under the default table (ratio 2.2).'
+  control_layered_bulk_02:
+    family: layered_bulk
+    formula: C8
+    elements:
+    - C
+    natom: 8
+    expected_d_star: 2
+    expected_morphology_class: layered_bulk
+    expected_short_lambda_dim:
+      '0.90': 0
+      '1.00': 2
+      '1.10': 2
+      '1.20': 2
+      '1.35': 2
+      '1.50': 2
+    expected_mean_cn: 3.0
+    expected_cn_min: 3
+    expected_cn_max: 3
+    expected_cn_hist:
+      '3': 8
+    cn_method: CrystalNN
+    expected_site_geometries:
+    - site: C
+      cn: 3
+      geometry: trigonal_planar
+    expected_validity:
+      q_min: 0.9344
+      n_overlap_pairs: 0
+      volume_norm: 9.5481
+      cell_kappa: 15.407
+      aspect_ratio: 10.894
+      overlap_flag: false
+      extreme_volume_flag: false
+      pathological_cell_flag: true
+    expected_vacuum_gap: 5.18
+    notes: 'Graphite AB 4L (a=2.46, c=26.80): in-plane C-C 1.42 A; interlayer 3.35 A never bonds at lambda<=1.5 under the default table (ratio 2.2).'
+  control_layered_bulk_03:
+    family: layered_bulk
+    formula: Mo2S4
+    elements:
+    - Mo
+    - S
+    natom: 6
+    expected_d_star: 2
+    expected_morphology_class: layered_bulk
+    expected_short_lambda_dim:
+      '0.90': 0
+      '1.00': 2
+      '1.10': 2
+      '1.20': 2
+      '1.35': 2
+      '1.50': 2
+    expected_mean_cn: 4.0
+    expected_cn_min: 3
+    expected_cn_max: 6
+    expected_cn_hist:
+      '3': 4
+      '6': 2
+    cn_method: CrystalNN
+    expected_site_geometries:
+    - site: Mo
+      cn: 6
+      geometry: trigonal_prismatic
+    - site: S
+      cn: 3
+      geometry: other
+    expected_validity:
+      q_min: 0.9334
+      n_overlap_pairs: 0
+      volume_norm: 2.1276
+      cell_kappa: 5.505
+      aspect_ratio: 3.892
+      overlap_flag: false
+      extreme_volume_flag: false
+      pathological_cell_flag: false
+    expected_vacuum_gap: 0.878
+    notes: "MoS2 2H-type 2L (a=3.16, c=12.30): Mo-S 2.42 A; interlayer S-S ~3.5 A (vdW, no bond at lambda<=1.5). S is trigonal-pyramidal (CN=3) -> 'other' (not in frozen GEOMETRY_LABELS)."
+  control_layered_bulk_04:
+    family: layered_bulk
+    formula: Mo4S8
+    elements:
+    - Mo
+    - S
+    natom: 12
+    expected_d_star: 2
+    expected_morphology_class: layered_bulk
+    expected_short_lambda_dim:
+      '0.90': 0
+      '1.00': 2
+      '1.10': 2
+      '1.20': 2
+      '1.35': 2
+      '1.50': 2
+    expected_mean_cn: 4.0
+    expected_cn_min: 3
+    expected_cn_max: 6
+    expected_cn_hist:
+      '3': 8
+      '6': 4
+    cn_method: CrystalNN
+    expected_site_geometries:
+    - site: Mo
+      cn: 6
+      geometry: trigonal_prismatic
+    - site: S
+      cn: 3
+      geometry: other
+    expected_validity:
+      q_min: 0.9334
+      n_overlap_pairs: 0
+      volume_norm: 2.1276
+      cell_kappa: 11.009
+      aspect_ratio: 7.785
+      overlap_flag: false
+      extreme_volume_flag: false
+      pathological_cell_flag: false
+    expected_vacuum_gap: 0.878
+    notes: "MoS2 2H-type 4L (a=3.16, c=24.60): Mo-S 2.42 A; interlayer S-S ~3.5 A (vdW, no bond at lambda<=1.5). S is trigonal-pyramidal (CN=3) -> 'other' (not in frozen GEOMETRY_LABELS)."
+  control_explicit_vacuum_slab_01:
+    family: explicit_vacuum_slab
+    formula: Si32
+    elements:
+    - Si
+    natom: 32
+    expected_d_star: 2
+    expected_morphology_class: explicit_vacuum_slab
+    expected_short_lambda_dim:
+      '0.90': 0
+      '1.00': 0
+      '1.10': 2
+      '1.20': 2
+      '1.35': 2
+      '1.50': 2
+    expected_mean_cn: 3.25
+    expected_cn_min: 1
+    expected_cn_max: 4
+    expected_cn_hist:
+      '1': 8
+      '4': 24
+    cn_method: CrystalNN
+    expected_site_geometries:
+    - site: Si
+      cn: 4
+      geometry: tetrahedral
+    - site: Si
+      cn: 1
+      geometry: other
+    expected_validity:
+      q_min: 1.0591
+      n_overlap_pairs: 0
+      volume_norm: 9.9611
+      cell_kappa: 6.585
+      aspect_ratio: 4.656
+      overlap_flag: false
+      extreme_volume_flag: false
+      pathological_cell_flag: false
+    expected_vacuum_gap: 21.78
+    notes: 'Si(111) ideal 1x1 slab, ASE layers=4 bilayers (32 atoms), per-side vacuum 12 A (the expected_vacuum_gap below reports the merged total 2x{vac:.0f} A per the circular-interval formula). Surface planes CN=1 (dangling bond), interior CN=4; no CN=3 plane in this cut. d(1.0)=0 because Cordero Si under-bonds (Si-Si 2.35 A vs 2.22 A); in-plane network appears at lambda>=1.1 -> d=2 at all higher lambda. fast_default: d(lambda=1.00)=0 != physical expected_d_star=2 (Cordero covalent radii under-bond; Phase-0 calibrated pair table expected to fix).'
+  control_explicit_vacuum_slab_02:
+    family: explicit_vacuum_slab
+    formula: Si40
+    elements:
+    - Si
+    natom: 40
+    expected_d_star: 2
+    expected_morphology_class: explicit_vacuum_slab
+    expected_short_lambda_dim:
+      '0.90': 0
+      '1.00': 0
+      '1.10': 2
+      '1.20': 2
+      '1.35': 2
+      '1.50': 2
+    expected_mean_cn: 3.4
+    expected_cn_min: 1
+    expected_cn_max: 4
+    expected_cn_hist:
+      '1': 8
+      '4': 32
+    cn_method: CrystalNN
+    expected_site_geometries:
+    - site: Si
+      cn: 4
+      geometry: tetrahedral
+    - site: Si
+      cn: 1
+      geometry: other
+    expected_validity:
+      q_min: 1.0591
+      n_overlap_pairs: 0
+      volume_norm: 8.6675
+      cell_kappa: 7.162
+      aspect_ratio: 5.065
+      overlap_flag: false
+      extreme_volume_flag: false
+      pathological_cell_flag: false
+    expected_vacuum_gap: 21.78
+    notes: 'Si(111) ideal 1x1 slab, ASE layers=5 bilayers (40 atoms), per-side vacuum 12 A (the expected_vacuum_gap below reports the merged total 2x{vac:.0f} A per the circular-interval formula). Surface planes CN=1 (dangling bond), interior CN=4; no CN=3 plane in this cut. d(1.0)=0 because Cordero Si under-bonds (Si-Si 2.35 A vs 2.22 A); in-plane network appears at lambda>=1.1 -> d=2 at all higher lambda. fast_default: d(lambda=1.00)=0 != physical expected_d_star=2 (Cordero covalent radii under-bond; Phase-0 calibrated pair table expected to fix).'
+  control_explicit_vacuum_slab_03:
+    family: explicit_vacuum_slab
+    formula: Si48
+    elements:
+    - Si
+    natom: 48
+    expected_d_star: 2
+    expected_morphology_class: explicit_vacuum_slab
+    expected_short_lambda_dim:
+      '0.90': 0
+      '1.00': 0
+      '1.10': 2
+      '1.20': 2
+      '1.35': 2
+      '1.50': 2
+    expected_mean_cn: 3.5
+    expected_cn_min: 1
+    expected_cn_max: 4
+    expected_cn_hist:
+      '1': 8
+      '4': 40
+    cn_method: CrystalNN
+    expected_site_geometries:
+    - site: Si
+      cn: 4
+      geometry: tetrahedral
+    - site: Si
+      cn: 1
+      geometry: other
+    expected_validity:
+      q_min: 1.0591
+      n_overlap_pairs: 0
+      volume_norm: 8.9195
+      cell_kappa: 8.845
+      aspect_ratio: 6.254
+      overlap_flag: false
+      extreme_volume_flag: false
+      pathological_cell_flag: false
+    expected_vacuum_gap: 27.78
+    notes: 'Si(111) ideal 1x1 slab, ASE layers=6 bilayers (48 atoms), per-side vacuum 15 A (the expected_vacuum_gap below reports the merged total 2x{vac:.0f} A per the circular-interval formula). Surface planes CN=1 (dangling bond), interior CN=4; no CN=3 plane in this cut. d(1.0)=0 because Cordero Si under-bonds (Si-Si 2.35 A vs 2.22 A); in-plane network appears at lambda>=1.1 -> d=2 at all higher lambda. fast_default: d(lambda=1.00)=0 != physical expected_d_star=2 (Cordero covalent radii under-bond; Phase-0 calibrated pair table expected to fix).'
+  control_explicit_vacuum_slab_04:
+    family: explicit_vacuum_slab
+    formula: Si56
+    elements:
+    - Si
+    natom: 56
+    expected_d_star: 2
+    expected_morphology_class: explicit_vacuum_slab
+    expected_short_lambda_dim:
+      '0.90': 0
+      '1.00': 0
+      '1.10': 2
+      '1.20': 2
+      '1.35': 2
+      '1.50': 2
+    expected_mean_cn: 3.5714
+    expected_cn_min: 1
+    expected_cn_max: 4
+    expected_cn_hist:
+      '1': 8
+      '4': 48
+    cn_method: CrystalNN
+    expected_site_geometries:
+    - site: Si
+      cn: 4
+      geometry: tetrahedral
+    - site: Si
+      cn: 1
+      geometry: other
+    expected_validity:
+      q_min: 1.0591
+      n_overlap_pairs: 0
+      volume_norm: 8.1444
+      cell_kappa: 9.422
+      aspect_ratio: 6.662
+      overlap_flag: false
+      extreme_volume_flag: false
+      pathological_cell_flag: false
+    expected_vacuum_gap: 27.78
+    notes: 'Si(111) ideal 1x1 slab, ASE layers=7 bilayers (56 atoms), per-side vacuum 15 A (the expected_vacuum_gap below reports the merged total 2x{vac:.0f} A per the circular-interval formula). Surface planes CN=1 (dangling bond), interior CN=4; no CN=3 plane in this cut. d(1.0)=0 because Cordero Si under-bonds (Si-Si 2.35 A vs 2.22 A); in-plane network appears at lambda>=1.1 -> d=2 at all higher lambda. fast_default: d(lambda=1.00)=0 != physical expected_d_star=2 (Cordero covalent radii under-bond; Phase-0 calibrated pair table expected to fix).'
+  control_explicit_vacuum_slab_05:
+    family: explicit_vacuum_slab
+    formula: Si64
+    elements:
+    - Si
+    natom: 64
+    expected_d_star: 2
+    expected_morphology_class: explicit_vacuum_slab
+    expected_short_lambda_dim:
+      '0.90': 0
+      '1.00': 0
+      '1.10': 2
+      '1.20': 2
+      '1.35': 2
+      '1.50': 2
+    expected_mean_cn: 3.625
+    expected_cn_min: 1
+    expected_cn_max: 4
+    expected_cn_hist:
+      '1': 8
+      '4': 56
+    cn_method: CrystalNN
+    expected_site_geometries:
+    - site: Si
+      cn: 4
+      geometry: tetrahedral
+    - site: Si
+      cn: 1
+      geometry: other
+    expected_validity:
+      q_min: 1.0591
+      n_overlap_pairs: 0
+      volume_norm: 8.3987
+      cell_kappa: 11.104
+      aspect_ratio: 7.852
+      overlap_flag: false
+      extreme_volume_flag: false
+      pathological_cell_flag: false
+    expected_vacuum_gap: 33.78
+    notes: 'Si(111) ideal 1x1 slab, ASE layers=8 bilayers (64 atoms), per-side vacuum 18 A (the expected_vacuum_gap below reports the merged total 2x{vac:.0f} A per the circular-interval formula). Surface planes CN=1 (dangling bond), interior CN=4; no CN=3 plane in this cut. d(1.0)=0 because Cordero Si under-bonds (Si-Si 2.35 A vs 2.22 A); in-plane network appears at lambda>=1.1 -> d=2 at all higher lambda. fast_default: d(lambda=1.00)=0 != physical expected_d_star=2 (Cordero covalent radii under-bond; Phase-0 calibrated pair table expected to fix).'
+  control_intrinsic_2d_like_01:
+    family: intrinsic_2d_like
+    formula: C2
+    elements:
+    - C
+    natom: 2
+    expected_d_star: 2
+    expected_morphology_class: intrinsic_2d_like
+    expected_short_lambda_dim:
+      '0.90': 0
+      '1.00': 2
+      '1.10': 2
+      '1.20': 2
+      '1.35': 2
+      '1.50': 2
+    expected_mean_cn: 3.0
+    expected_cn_min: 3
+    expected_cn_max: 3
+    expected_cn_hist:
+      '3': 2
+    cn_method: CrystalNN
+    expected_site_geometries:
+    - site: C
+      cn: 3
+      geometry: trigonal_planar
+    expected_validity:
+      q_min: 0.9344
+      n_overlap_pairs: 0
+      volume_norm: 21.3763
+      cell_kappa: 8.623
+      aspect_ratio: 6.098
+      overlap_flag: false
+      extreme_volume_flag: true
+      pathological_cell_flag: false
+    expected_vacuum_gap: 13.48
+    notes: 'Graphene monolayer, vacuum 15 A. True 2D material: no surface CN gradient, no bulk core. extreme_volume_flag expected (boxed / vdW species).'
+  control_intrinsic_2d_like_02:
+    family: intrinsic_2d_like
+    formula: C2
+    elements:
+    - C
+    natom: 2
+    expected_d_star: 2
+    expected_morphology_class: intrinsic_2d_like
+    expected_short_lambda_dim:
+      '0.90': 0
+      '1.00': 2
+      '1.10': 2
+      '1.20': 2
+      '1.35': 2
+      '1.50': 2
+    expected_mean_cn: 3.0
+    expected_cn_min: 3
+    expected_cn_max: 3
+    expected_cn_hist:
+      '3': 2
+    cn_method: CrystalNN
+    expected_site_geometries:
+    - site: C
+      cn: 3
+      geometry: trigonal_planar
+    expected_validity:
+      q_min: 0.9344
+      n_overlap_pairs: 0
+      volume_norm: 28.5017
+      cell_kappa: 11.498
+      aspect_ratio: 8.13
+      overlap_flag: false
+      extreme_volume_flag: true
+      pathological_cell_flag: false
+    expected_vacuum_gap: 18.48
+    notes: 'Graphene monolayer, vacuum 20 A. True 2D material: no surface CN gradient, no bulk core. extreme_volume_flag expected (boxed / vdW species).'
+  control_intrinsic_2d_like_03:
+    family: intrinsic_2d_like
+    formula: BN
+    elements:
+    - B
+    - N
+    natom: 2
+    expected_d_star: 2
+    expected_morphology_class: intrinsic_2d_like
+    expected_short_lambda_dim:
+      '0.90': 0
+      '1.00': 2
+      '1.10': 2
+      '1.20': 2
+      '1.35': 2
+      '1.50': 2
+    expected_mean_cn: 3.0
+    expected_cn_min: 3
+    expected_cn_max: 3
+    expected_cn_hist:
+      '3': 2
+    cn_method: CrystalNN
+    expected_site_geometries:
+    - site: B
+      cn: 3
+      geometry: trigonal_planar
+    - site: N
+      cn: 3
+      geometry: trigonal_planar
+    expected_validity:
+      q_min: 0.9327
+      n_overlap_pairs: 0
+      volume_norm: 20.4549
+      cell_kappa: 8.472
+      aspect_ratio: 5.99
+      overlap_flag: false
+      extreme_volume_flag: true
+      pathological_cell_flag: false
+    expected_vacuum_gap: 13.45
+    notes: hBN monolayer, vacuum 15 A (B-N 1.446 A). extreme_volume_flag expected (boxed / vdW species).
+  control_intrinsic_2d_like_04:
+    family: intrinsic_2d_like
+    formula: MoS2
+    elements:
+    - Mo
+    - S
+    natom: 3
+    expected_d_star: 2
+    expected_morphology_class: intrinsic_2d_like
+    expected_short_lambda_dim:
+      '0.90': 0
+      '1.00': 2
+      '1.10': 2
+      '1.20': 2
+      '1.35': 2
+      '1.50': 2
+    expected_mean_cn: 4.0
+    expected_cn_min: 3
+    expected_cn_max: 6
+    expected_cn_hist:
+      '3': 2
+      '6': 1
+    cn_method: CrystalNN
+    expected_site_geometries:
+    - site: Mo
+      cn: 6
+      geometry: trigonal_prismatic
+    - site: S
+      cn: 3
+      geometry: other
+    expected_validity:
+      q_min: 0.9334
+      n_overlap_pairs: 0
+      volume_norm: 5.1894
+      cell_kappa: 6.713
+      aspect_ratio: 4.747
+      overlap_flag: false
+      extreme_volume_flag: false
+      pathological_cell_flag: false
+    expected_vacuum_gap: 9.728
+    notes: MoS2 monolayer, vacuum 15 A.
+  control_chain_solid_01:
+    family: chain_solid
+    formula: Se9
+    elements:
+    - Se
+    natom: 9
+    expected_d_star: 1
+    expected_morphology_class: chain_solid
+    expected_short_lambda_dim:
+      '0.90': 0
+      '1.00': 1
+      '1.10': 1
+      '1.20': 1
+      '1.35': 1
+      '1.50': 3
+    expected_mean_cn: 2.0
+    expected_cn_min: 2
+    expected_cn_max: 2
+    expected_cn_hist:
+      '2': 9
+    cn_method: CrystalNN
+    expected_site_geometries:
+    - site: Se
+      cn: 2
+      geometry: other
+    expected_validity:
+      q_min: 0.9887
+      n_overlap_pairs: 0
+      volume_norm: 3.3595
+      cell_kappa: 1.732
+      aspect_ratio: 1.195
+      overlap_flag: false
+      extreme_volume_flag: false
+      pathological_cell_flag: false
+    expected_vacuum_gap: 0.0
+    notes: "Se trigonal-type chain solid: a=5.958 A -> interchain ~3.5 A (vdW contact, bonds at lambda=1.5 -> d:1->3); intrachain Se-Se 2.373 A. Se CN=2, bond angle ~103 deg -> 'other'."
+  control_chain_solid_02:
+    family: chain_solid
+    formula: Se18
+    elements:
+    - Se
+    natom: 18
+    expected_d_star: 1
+    expected_morphology_class: chain_solid
+    expected_short_lambda_dim:
+      '0.90': 0
+      '1.00': 1
+      '1.10': 1
+      '1.20': 1
+      '1.35': 1
+      '1.50': 3
+    expected_mean_cn: 2.0
+    expected_cn_min: 2
+    expected_cn_max: 2
+    expected_cn_hist:
+      '2': 18
+    cn_method: CrystalNN
+    expected_site_geometries:
+    - site: Se
+      cn: 2
+      geometry: other
+    expected_validity:
+      q_min: 0.9887
+      n_overlap_pairs: 0
+      volume_norm: 3.3595
+      cell_kappa: 3.38
+      aspect_ratio: 2.39
+      overlap_flag: false
+      extreme_volume_flag: false
+      pathological_cell_flag: false
+    expected_vacuum_gap: 0.0
+    notes: Se chain solid, 6 atoms per chain (c doubled). Se CN=2, bond angle ~103 deg -> 'other'.
+  control_chain_solid_03:
+    family: chain_solid
+    formula: Se9
+    elements:
+    - Se
+    natom: 9
+    expected_d_star: 1
+    expected_morphology_class: chain_solid
+    expected_short_lambda_dim:
+      '0.90': 0
+      '1.00': 1
+      '1.10': 1
+      '1.20': 1
+      '1.35': 3
+      '1.50': 3
+    expected_mean_cn: 2.0
+    expected_cn_min: 2
+    expected_cn_max: 2
+    expected_cn_hist:
+      '2': 9
+    cn_method: CrystalNN
+    expected_site_geometries:
+    - site: Se
+      cn: 2
+      geometry: other
+    expected_validity:
+      q_min: 0.9888
+      n_overlap_pairs: 0
+      volume_norm: 2.9078
+      cell_kappa: 1.816
+      aspect_ratio: 1.284
+      overlap_flag: false
+      extreme_volume_flag: false
+      pathological_cell_flag: false
+    expected_vacuum_gap: 0.0
+    notes: Se chain solid with closer, phase-aligned interchain contact 3.20 A (bonds at lambda=1.35). Se CN=2, bond angle ~103 deg -> 'other'.
+  control_isolated_chain_01:
+    family: isolated_chain
+    formula: Se8
+    elements:
+    - Se
+    natom: 8
+    expected_d_star: 0
+    expected_morphology_class: isolated_chain
+    expected_short_lambda_dim:
+      '0.90': 0
+      '1.00': 0
+      '1.10': 0
+      '1.20': 0
+      '1.35': 0
+      '1.50': 0
+    expected_mean_cn: 1.75
+    expected_cn_min: 1
+    expected_cn_max: 2
+    expected_cn_hist:
+      '1': 2
+      '2': 6
+    cn_method: CrystalNN
+    expected_site_geometries:
+    - site: Se
+      cn: 2
+      geometry: other
+    - site: Se
+      cn: 1
+      geometry: other
+    expected_validity:
+      q_min: 0.9887
+      n_overlap_pairs: 0
+      volume_norm: 97.1405
+      cell_kappa: 1.667
+      aspect_ratio: 1.667
+      overlap_flag: false
+      extreme_volume_flag: true
+      pathological_cell_flag: false
+    expected_vacuum_gap: 12.6
+    notes: FINITE Se chain (8 atoms) in a 15x15x25 A box. Contract defines finite clusters as d=0; the 1D character is carried by the morphology class, not by d(lambda). End-to-image distance is 8.9 A so the chain never bonds to its periodic image at lambda<=1.5. extreme_volume_flag expected (boxed / vdW species).
+  control_isolated_chain_02:
+    family: isolated_chain
+    formula: Se8
+    elements:
+    - Se
+    natom: 8
+    expected_d_star: 1
+    expected_morphology_class: isolated_chain
+    expected_short_lambda_dim:
+      '0.90': 0
+      '1.00': 1
+      '1.10': 1
+      '1.20': 1
+      '1.35': 1
+      '1.50': 1
+    expected_mean_cn: 2.0
+    expected_cn_min: 2
+    expected_cn_max: 2
+    expected_cn_hist:
+      '2': 8
+    cn_method: CrystalNN
+    expected_site_geometries:
+    - site: Se
+      cn: 2
+      geometry: other
+    expected_validity:
+      q_min: 0.9887
+      n_overlap_pairs: 0
+      volume_norm: 73.7646
+      cell_kappa: 1.266
+      aspect_ratio: 1.266
+      overlap_flag: false
+      extreme_volume_flag: true
+      pathological_cell_flag: false
+    expected_vacuum_gap: 12.6
+    notes: 'PERIODICALLY WRAPPED Se chain (8 atoms span the cell): closes on itself through the periodic boundary -> d=1. Contrast with control_isolated_chain_01 (finite, d=0). extreme_volume_flag expected (boxed / vdW species).'
+  control_isolated_chain_03:
+    family: isolated_chain
+    formula: C8
+    elements:
+    - C
+    natom: 8
+    expected_d_star: 0
+    expected_morphology_class: isolated_chain
+    expected_short_lambda_dim:
+      '0.90': 0
+      '1.00': 0
+      '1.10': 0
+      '1.20': 0
+      '1.35': 0
+      '1.50': 0
+    expected_mean_cn: 1.75
+    expected_cn_min: 1
+    expected_cn_max: 2
+    expected_cn_hist:
+      '1': 2
+      '2': 6
+    cn_method: CrystalNN
+    expected_site_geometries:
+    - site: C
+      cn: 2
+      geometry: linear
+    - site: C
+      cn: 1
+      geometry: other
+    expected_validity:
+      q_min: 0.8553
+      n_overlap_pairs: 0
+      volume_norm: 229.4322
+      cell_kappa: 1.0
+      aspect_ratio: 1.0
+      overlap_flag: false
+      extreme_volume_flag: true
+      pathological_cell_flag: false
+    expected_vacuum_gap: 13.48
+    notes: FINITE C cumulene chain (8 atoms, d_CC=1.30 A) in a 15 A box. Bonds at lambda=1.0 (ratio 0.855). d=0 (finite cluster). extreme_volume_flag expected (boxed / vdW species).
+  control_isolated_chain_04:
+    family: isolated_chain
+    formula: C12
+    elements:
+    - C
+    natom: 12
+    expected_d_star: 1
+    expected_morphology_class: isolated_chain
+    expected_short_lambda_dim:
+      '0.90': 1
+      '1.00': 1
+      '1.10': 1
+      '1.20': 1
+      '1.35': 1
+      '1.50': 1
+    expected_mean_cn: 2.0
+    expected_cn_min: 2
+    expected_cn_max: 2
+    expected_cn_hist:
+      '2': 12
+    cn_method: CrystalNN
+    expected_site_geometries:
+    - site: C
+      cn: 2
+      geometry: linear
+    expected_validity:
+      q_min: 0.8553
+      n_overlap_pairs: 0
+      volume_norm: 229.0651
+      cell_kappa: 1.154
+      aspect_ratio: 1.154
+      overlap_flag: false
+      extreme_volume_flag: true
+      pathological_cell_flag: false
+    expected_vacuum_gap: 16.48
+    notes: PERIODICALLY WRAPPED C cumulene chain (12 atoms) -> d=1 at every lambda. extreme_volume_flag expected (boxed / vdW species).
+  control_molecular_crystal_01:
+    family: molecular_crystal
+    formula: H8
+    elements:
+    - H
+    natom: 8
+    expected_d_star: 0
+    expected_morphology_class: molecular_crystal
+    expected_short_lambda_dim:
+      '0.90': 0
+      '1.00': 0
+      '1.10': 0
+      '1.20': 0
+      '1.35': 0
+      '1.50': 0
+    expected_mean_cn: 1.0
+    expected_cn_min: 1
+    expected_cn_max: 1
+    expected_cn_hist:
+      '1': 8
+    cn_method: CrystalNN
+    expected_site_geometries:
+    - site: H
+      cn: 1
+      geometry: other
+    expected_validity:
+      q_min: 1.1935
+      n_overlap_pairs: 0
+      volume_norm: 149.1296
+      cell_kappa: 1.0
+      aspect_ratio: 1.0
+      overlap_flag: false
+      extreme_volume_flag: true
+      pathological_cell_flag: false
+    expected_vacuum_gap: 2.03
+    notes: H2 fcc crystal, 4 molecules (a=5.3 A). Intramolecular H-H 0.74 A bonds at lambda>=1.2; intermolecular >=3.7 A never bonds -> d=0 at all lambda. Large volume_norm expected (vdW crystal). extreme_volume_flag expected (boxed / vdW species).
+  control_molecular_crystal_02:
+    family: molecular_crystal
+    formula: N8
+    elements:
+    - N
+    natom: 8
+    expected_d_star: 0
+    expected_morphology_class: molecular_crystal
+    expected_short_lambda_dim:
+      '0.90': 0
+      '1.00': 0
+      '1.10': 0
+      '1.20': 0
+      '1.35': 0
+      '1.50': 0
+    expected_mean_cn: 1.0
+    expected_cn_min: 1
+    expected_cn_max: 1
+    expected_cn_hist:
+      '1': 8
+    cn_method: CrystalNN
+    expected_site_geometries:
+    - site: N
+      cn: 1
+      geometry: other
+    expected_validity:
+      q_min: 0.7746
+      n_overlap_pairs: 8
+      volume_norm: 15.118
+      cell_kappa: 1.0
+      aspect_ratio: 1.0
+      overlap_flag: true
+      extreme_volume_flag: true
+      pathological_cell_flag: false
+    expected_vacuum_gap: 1.41
+    notes: N2 fcc crystal (a=5.66 A). N-N 1.10 A bonds at lambda=0.9. extreme_volume_flag expected (boxed / vdW species). overlap_flag expected (short multiple bond).
+  control_molecular_crystal_03:
+    family: molecular_crystal
+    formula: H8O4
+    elements:
+    - H
+    - O
+    natom: 12
+    expected_d_star: 0
+    expected_morphology_class: molecular_crystal
+    expected_short_lambda_dim:
+      '0.90': 0
+      '1.00': 0
+      '1.10': 0
+      '1.20': 0
+      '1.35': 0
+      '1.50': 0
+    expected_mean_cn: 1.3333
+    expected_cn_min: 1
+    expected_cn_max: 2
+    expected_cn_hist:
+      '1': 8
+      '2': 4
+    cn_method: CrystalNN
+    expected_site_geometries:
+    - site: O
+      cn: 2
+      geometry: other
+    - site: H
+      cn: 1
+      geometry: other
+    expected_validity:
+      q_min: 0.7274
+      n_overlap_pairs: 4
+      volume_norm: 30.1987
+      cell_kappa: 1.0
+      aspect_ratio: 1.0
+      overlap_flag: true
+      extreme_volume_flag: true
+      pathological_cell_flag: false
+    expected_vacuum_gap: 1.83
+    notes: Idealized H2O fcc crystal, 4 molecules (a=5.6 A), fixed orientation. O is bent CN=2 -> 'other'. Intermolecular H...O >=3.0 A never bonds at lambda<=1.5. extreme_volume_flag expected (boxed / vdW species). overlap_flag expected (short multiple bond).
+  control_molecular_crystal_04:
+    family: molecular_crystal
+    formula: H2O
+    elements:
+    - H
+    - O
+    natom: 3
+    expected_d_star: 0
+    expected_morphology_class: molecular_crystal
+    expected_short_lambda_dim:
+      '0.90': 0
+      '1.00': 0
+      '1.10': 0
+      '1.20': 0
+      '1.35': 0
+      '1.50': 0
+    expected_mean_cn: 1.3333
+    expected_cn_min: 1
+    expected_cn_max: 2
+    expected_cn_hist:
+      '1': 2
+      '2': 1
+    cn_method: CrystalNN
+    expected_site_geometries:
+    - site: O
+      cn: 2
+      geometry: other
+    - site: H
+      cn: 1
+      geometry: other
+    expected_validity:
+      q_min: 0.9898
+      n_overlap_pairs: 0
+      volume_norm: 148.5724
+      cell_kappa: 1.0
+      aspect_ratio: 1.0
+      overlap_flag: false
+      extreme_volume_flag: true
+      pathological_cell_flag: false
+    expected_vacuum_gap: 5.03
+    notes: Idealized H2O simple-cubic crystal, 1 molecule per cell (a=6.0 A). extreme_volume_flag expected (boxed / vdW species).
+  control_isolated_molecule_01:
+    family: isolated_molecule
+    formula: H2
+    elements:
+    - H
+    natom: 2
+    expected_d_star: 0
+    expected_morphology_class: isolated_molecule
+    expected_short_lambda_dim:
+      '0.90': 0
+      '1.00': 0
+      '1.10': 0
+      '1.20': 0
+      '1.35': 0
+      '1.50': 0
+    expected_mean_cn: 1.0
+    expected_cn_min: 1
+    expected_cn_max: 1
+    expected_cn_hist:
+      '1': 2
+    cn_method: CrystalNN
+    expected_site_geometries:
+    - site: H
+      cn: 1
+      geometry: other
+    expected_validity:
+      q_min: 1.1935
+      n_overlap_pairs: 0
+      volume_norm: 13522.9079
+      cell_kappa: 1.0
+      aspect_ratio: 1.0
+      overlap_flag: false
+      extreme_volume_flag: true
+      pathological_cell_flag: false
+    expected_vacuum_gap: 14.38
+    notes: Single H2 in a 15 A box. H-H 0.74 A bonds only at lambda>=1.2 (Cordero 0.62 A); d=0 either way (tree). extreme_volume_flag expected (boxed / vdW species).
+  control_isolated_molecule_02:
+    family: isolated_molecule
+    formula: H2O
+    elements:
+    - H
+    - O
+    natom: 3
+    expected_d_star: 0
+    expected_morphology_class: isolated_molecule
+    expected_short_lambda_dim:
+      '0.90': 0
+      '1.00': 0
+      '1.10': 0
+      '1.20': 0
+      '1.35': 0
+      '1.50': 0
+    expected_mean_cn: 1.3333
+    expected_cn_min: 1
+    expected_cn_max: 2
+    expected_cn_hist:
+      '1': 2
+      '2': 1
+    cn_method: CrystalNN
+    expected_site_geometries:
+    - site: O
+      cn: 2
+      geometry: other
+    - site: H
+      cn: 1
+      geometry: other
+    expected_validity:
+      q_min: 0.9898
+      n_overlap_pairs: 0
+      volume_norm: 2321.4433
+      cell_kappa: 1.0
+      aspect_ratio: 1.0
+      overlap_flag: false
+      extreme_volume_flag: true
+      pathological_cell_flag: false
+    expected_vacuum_gap: 14.03
+    notes: Single H2O in a 15 A box. O bent (104.5 deg) -> 'other'. extreme_volume_flag expected (boxed / vdW species).
+  control_isolated_molecule_03:
+    family: isolated_molecule
+    formula: CO2
+    elements:
+    - C
+    - O
+    natom: 3
+    expected_d_star: 0
+    expected_morphology_class: isolated_molecule
+    expected_short_lambda_dim:
+      '0.90': 0
+      '1.00': 0
+      '1.10': 0
+      '1.20': 0
+      '1.35': 0
+      '1.50': 0
+    expected_mean_cn: 1.3333
+    expected_cn_min: 1
+    expected_cn_max: 2
+    expected_cn_hist:
+      '1': 2
+      '2': 1
+    cn_method: shell_1.25_fallback
+    expected_site_geometries:
+    - site: C
+      cn: 2
+      geometry: linear
+    - site: O
+      cn: 1
+      geometry: other
+    expected_validity:
+      q_min: 0.8169
+      n_overlap_pairs: 2
+      volume_norm: 794.6226
+      cell_kappa: 1.0
+      aspect_ratio: 1.0
+      overlap_flag: true
+      extreme_volume_flag: true
+      pathological_cell_flag: false
+    expected_vacuum_gap: 13.58
+    notes: 'Single CO2 in a 15 A box. C-O 1.16 A: q_min=0.817<0.85 -> the L0 overlap_flag FIRES on a perfectly valid double-bonded molecule (expected, documented). CN note: CrystalNN gave {1: 3} which disagrees with the hand-set physical histogram {2: 1, 1: 2}; documented 1.25x-covalent shell rule used instead (CrystalNN is unreliable in vacuum boxes). extreme_volume_flag expected (boxed / vdW species). overlap_flag expected (short multiple bond).'
+  control_isolated_molecule_04:
+    family: isolated_molecule
+    formula: C2H2
+    elements:
+    - C
+    - H
+    natom: 4
+    expected_d_star: 0
+    expected_morphology_class: isolated_molecule
+    expected_short_lambda_dim:
+      '0.90': 0
+      '1.00': 0
+      '1.10': 0
+      '1.20': 0
+      '1.35': 0
+      '1.50': 0
+    expected_mean_cn: 1.5
+    expected_cn_min: 1
+    expected_cn_max: 2
+    expected_cn_hist:
+      '1': 2
+      '2': 2
+    cn_method: CrystalNN
+    expected_site_geometries:
+    - site: C
+      cn: 2
+      geometry: linear
+    - site: H
+      cn: 1
+      geometry: other
+    expected_validity:
+      q_min: 0.7961
+      n_overlap_pairs: 2
+      volume_norm: 859.4055
+      cell_kappa: 1.0
+      aspect_ratio: 1.0
+      overlap_flag: true
+      extreme_volume_flag: true
+      pathological_cell_flag: false
+    expected_vacuum_gap: 13.93
+    notes: Single acetylene in a 15 A box (C-C 1.21, C-H 1.06 A). extreme_volume_flag expected (boxed / vdW species). overlap_flag expected (short multiple bond).
+  control_isolated_molecule_05:
+    family: isolated_molecule
+    formula: CH4
+    elements:
+    - C
+    - H
+    natom: 5
+    expected_d_star: 0
+    expected_morphology_class: isolated_molecule
+    expected_short_lambda_dim:
+      '0.90': 0
+      '1.00': 0
+      '1.10': 0
+      '1.20': 0
+      '1.35': 0
+      '1.50': 0
+    expected_mean_cn: 1.6
+    expected_cn_min: 1
+    expected_cn_max: 4
+    expected_cn_hist:
+      '1': 4
+      '4': 1
+    cn_method: CrystalNN
+    expected_site_geometries:
+    - site: C
+      cn: 4
+      geometry: tetrahedral
+    - site: H
+      cn: 1
+      geometry: other
+    expected_validity:
+      q_min: 1.0182
+      n_overlap_pairs: 0
+      volume_norm: 1443.5839
+      cell_kappa: 1.0
+      aspect_ratio: 1.0
+      overlap_flag: false
+      extreme_volume_flag: true
+      pathological_cell_flag: false
+    expected_vacuum_gap: 13.122
+    notes: 'Single CH4 in a 15 A box. C-H 1.09 A vs Cordero 1.07 A: under-bonds at lambda=1.0, molecule forms at lambda>=1.1. extreme_volume_flag expected (boxed / vdW species).'
+  control_stretched_layer_01:
+    family: stretched_layer
+    formula: C4
+    elements:
+    - C
+    natom: 4
+    expected_d_star: 2
+    expected_morphology_class: layered_bulk
+    expected_short_lambda_dim:
+      '0.90': 0
+      '1.00': 2
+      '1.10': 2
+      '1.20': 2
+      '1.35': 2
+      '1.50': 2
+    expected_mean_cn: 3.0
+    expected_cn_min: 3
+    expected_cn_max: 3
+    expected_cn_hist:
+      '3': 4
+    cn_method: CrystalNN
+    expected_site_geometries:
+    - site: C
+      cn: 3
+      geometry: trigonal_planar
+    expected_validity:
+      q_min: 0.9344
+      n_overlap_pairs: 0
+      volume_norm: 7.1611
+      cell_kappa: 5.778
+      aspect_ratio: 4.085
+      overlap_flag: false
+      extreme_volume_flag: false
+      pathological_cell_flag: false
+    expected_vacuum_gap: 3.505
+    notes: 'Graphite AB 2L with c stretched 1.5x (interlayer 5.03 A). Expected layered_bulk: no explicit vacuum (gap 3.51 A after radii << slab vacuum >=12 A), no surface CN gradient, layers repeat in a periodic cell. Discriminates layered bulk from explicit-vacuum slab.'
+  control_stretched_layer_02:
+    family: stretched_layer
+    formula: C4
+    elements:
+    - C
+    natom: 4
+    expected_d_star: 2
+    expected_morphology_class: layered_bulk
+    expected_short_lambda_dim:
+      '0.90': 0
+      '1.00': 2
+      '1.10': 2
+      '1.20': 2
+      '1.35': 2
+      '1.50': 2
+    expected_mean_cn: 3.0
+    expected_cn_min: 3
+    expected_cn_max: 3
+    expected_cn_hist:
+      '3': 4
+    cn_method: CrystalNN
+    expected_site_geometries:
+    - site: C
+      cn: 3
+      geometry: trigonal_planar
+    expected_validity:
+      q_min: 0.9344
+      n_overlap_pairs: 0
+      volume_norm: 9.5481
+      cell_kappa: 7.703
+      aspect_ratio: 5.447
+      overlap_flag: false
+      extreme_volume_flag: false
+      pathological_cell_flag: false
+    expected_vacuum_gap: 5.18
+    notes: 'Graphite AB 2L with c stretched 2.0x (interlayer 6.70 A). Expected layered_bulk: no explicit vacuum (gap 5.18 A after radii << slab vacuum >=12 A), no surface CN gradient, layers repeat in a periodic cell. Discriminates layered bulk from explicit-vacuum slab.'
+  control_stretched_layer_03:
+    family: stretched_layer
+    formula: Mo2S4
+    elements:
+    - Mo
+    - S
+    natom: 6
+    expected_d_star: 2
+    expected_morphology_class: layered_bulk
+    expected_short_lambda_dim:
+      '0.90': 0
+      '1.00': 2
+      '1.10': 2
+      '1.20': 2
+      '1.35': 2
+      '1.50': 2
+    expected_mean_cn: 4.0
+    expected_cn_min: 3
+    expected_cn_max: 6
+    expected_cn_hist:
+      '3': 4
+      '6': 2
+    cn_method: CrystalNN
+    expected_site_geometries:
+    - site: Mo
+      cn: 6
+      geometry: trigonal_prismatic
+    - site: S
+      cn: 3
+      geometry: other
+    expected_validity:
+      q_min: 0.9334
+      n_overlap_pairs: 0
+      volume_norm: 3.1915
+      cell_kappa: 8.257
+      aspect_ratio: 5.839
+      overlap_flag: false
+      extreme_volume_flag: false
+      pathological_cell_flag: false
+    expected_vacuum_gap: 3.953
+    notes: MoS2 2H-type 2L with c stretched 1.5x (18.45 A). Interlayer S-S gap grows to ~6.1 A; still layered_bulk (no true vacuum, repeating layers).
+  control_high_coordination_01:
+    family: high_coordination
+    formula: Cu4
+    elements:
+    - Cu
+    natom: 4
+    expected_d_star: 3
+    expected_morphology_class: dense_bulk
+    expected_short_lambda_dim:
+      '0.90': 0
+      '1.00': 3
+      '1.10': 3
+      '1.20': 3
+      '1.35': 3
+      '1.50': 3
+    expected_mean_cn: 12.0
+    expected_cn_min: 12
+    expected_cn_max: 12
+    expected_cn_hist:
+      '12': 4
+    cn_method: CrystalNN
+    expected_site_geometries:
+    - site: Cu
+      cn: 12
+      geometry: cuboctahedral
+    expected_validity:
+      q_min: 0.9683
+      n_overlap_pairs: 0
+      volume_norm: 1.2259
+      cell_kappa: 1.0
+      aspect_ratio: 1.0
+      overlap_flag: false
+      extreme_volume_flag: false
+      pathological_cell_flag: false
+    expected_vacuum_gap: 0.0
+    notes: fcc Cu (a=3.615 A), CN=12 cuboctahedral (v1.3-L4 label). Metallic dense bulk used as the high-CN control.
+  control_high_coordination_02:
+    family: high_coordination
+    formula: Pd4
+    elements:
+    - Pd
+    natom: 4
+    expected_d_star: 3
+    expected_morphology_class: dense_bulk
+    expected_short_lambda_dim:
+      '0.90': 0
+      '1.00': 3
+      '1.10': 3
+      '1.20': 3
+      '1.35': 3
+      '1.50': 3
+    expected_mean_cn: 12.0
+    expected_cn_min: 12
+    expected_cn_max: 12
+    expected_cn_hist:
+      '12': 4
+    cn_method: CrystalNN
+    expected_site_geometries:
+    - site: Pd
+      cn: 12
+      geometry: cuboctahedral
+    expected_validity:
+      q_min: 0.9894
+      n_overlap_pairs: 0
+      volume_norm: 1.3081
+      cell_kappa: 1.0
+      aspect_ratio: 1.0
+      overlap_flag: false
+      extreme_volume_flag: false
+      pathological_cell_flag: false
+    expected_vacuum_gap: 0.0
+    notes: fcc Pd (a=3.89 A), CN=12 cuboctahedral (v1.3-L4 label). Metallic dense bulk used as the high-CN control.
+  control_high_coordination_03:
+    family: high_coordination
+    formula: Ag4
+    elements:
+    - Ag
+    natom: 4
+    expected_d_star: 3
+    expected_morphology_class: dense_bulk
+    expected_short_lambda_dim:
+      '0.90': 0
+      '1.00': 3
+      '1.10': 3
+      '1.20': 3
+      '1.35': 3
+      '1.50': 3
+    expected_mean_cn: 12.0
+    expected_cn_min: 12
+    expected_cn_max: 12
+    expected_cn_hist:
+      '12': 4
+    cn_method: CrystalNN
+    expected_site_geometries:
+    - site: Ag
+      cn: 12
+      geometry: cuboctahedral
+    expected_validity:
+      q_min: 0.996
+      n_overlap_pairs: 0
+      volume_norm: 1.3345
+      cell_kappa: 1.0
+      aspect_ratio: 1.0
+      overlap_flag: false
+      extreme_volume_flag: false
+      pathological_cell_flag: false
+    expected_vacuum_gap: 0.0
+    notes: fcc Ag (a=4.085 A), CN=12 cuboctahedral (v1.3-L4 label). Metallic dense bulk used as the high-CN control.
+  control_low_coordination_01:
+    family: low_coordination
+    formula: Si8
+    elements:
+    - Si
+    natom: 8
+    expected_d_star: 3
+    expected_morphology_class: dense_bulk
+    expected_short_lambda_dim:
+      '0.90': 0
+      '1.00': 0
+      '1.10': 0
+      '1.20': 0
+      '1.35': 3
+      '1.50': 3
+    expected_mean_cn: 4.0
+    expected_cn_min: 4
+    expected_cn_max: 4
+    expected_cn_hist:
+      '4': 8
+    cn_method: CrystalNN
+    expected_site_geometries:
+    - site: Si
+      cn: 4
+      geometry: tetrahedral
+    expected_validity:
+      q_min: 1.3242
+      n_overlap_pairs: 0
+      volume_norm: 6.8269
+      cell_kappa: 1.0
+      aspect_ratio: 1.0
+      overlap_flag: false
+      extreme_volume_flag: false
+      pathological_cell_flag: false
+    expected_vacuum_gap: 0.0
+    notes: 'Diamond Si lattice expanded 1.25x (Si-Si 2.94 A): sparse, bond-diluted covalent net. Default table bonds only at lambda>=1.35; CrystalNN CN=4. Tests the low-CN / sparse regime. fast_default: d(lambda=1.00)=0 != physical expected_d_star=3 (Cordero covalent radii under-bond; Phase-0 calibrated pair table expected to fix).'
+  control_low_coordination_02:
+    family: low_coordination
+    formula: Si8
+    elements:
+    - Si
+    natom: 8
+    expected_d_star: 3
+    expected_morphology_class: dense_bulk
+    expected_short_lambda_dim:
+      '0.90': 0
+      '1.00': 0
+      '1.10': 0
+      '1.20': 0
+      '1.35': 0
+      '1.50': 3
+    expected_mean_cn: 0.0
+    expected_cn_min: 0
+    expected_cn_max: 0
+    expected_cn_hist:
+      '0': 8
+    cn_method: CrystalNN
+    expected_site_geometries:
+    - site: Si
+      cn: 0
+      geometry: other
+    expected_validity:
+      q_min: 1.483
+      n_overlap_pairs: 0
+      volume_norm: 9.5913
+      cell_kappa: 1.0
+      aspect_ratio: 1.0
+      overlap_flag: false
+      extreme_volume_flag: false
+      pathological_cell_flag: false
+    expected_vacuum_gap: 0.0
+    notes: 'Diamond Si lattice expanded 1.40x (Si-Si 3.29 A): sparse, bond-diluted covalent net. Default table bonds only at lambda>=1.35 (or >=1.5); CrystalNN CN=0. Tests the low-CN / sparse regime. fast_default: d(lambda=1.00)=0 != physical expected_d_star=3 (Cordero covalent radii under-bond; Phase-0 calibrated pair table expected to fix).'
+  control_low_coordination_03:
+    family: low_coordination
+    formula: Si4
+    elements:
+    - Si
+    natom: 4
+    expected_d_star: 0
+    expected_morphology_class: isolated_molecule
+    expected_short_lambda_dim:
+      '0.90': 0
+      '1.00': 0
+      '1.10': 0
+      '1.20': 0
+      '1.35': 0
+      '1.50': 0
+    expected_mean_cn: 3.0
+    expected_cn_min: 3
+    expected_cn_max: 3
+    expected_cn_hist:
+      '3': 4
+    cn_method: shell_1.25_fallback
+    expected_site_geometries:
+    - site: Si
+      cn: 3
+      geometry: other
+    expected_validity:
+      q_min: 0.8643
+      n_overlap_pairs: 0
+      volume_norm: 147.2842
+      cell_kappa: 1.0
+      aspect_ratio: 1.0
+      overlap_flag: false
+      extreme_volume_flag: true
+      pathological_cell_flag: false
+    expected_vacuum_gap: 11.423
+    notes: 'Si4 tetrahedral cluster in a 15 A box: genuinely low CN (3 vs bulk 4), 0D finite cluster. Morphologically an isolated cluster (mapped to isolated_molecule). CN note: CrystalNN failed on this cell; documented 1.25x-covalent shell rule used instead. extreme_volume_flag expected (boxed / vdW species).'

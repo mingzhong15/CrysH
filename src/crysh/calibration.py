@@ -1,8 +1,8 @@
 """Phase-0 per-pair cutoff calibration: CrystalNN bond-length statistics -> the
-``ckt.bond`` ``cutoff_table`` format.
+``crysh.dimensionality`` ``cutoff_table`` format.
 
-Ownership: phase0-calibration. Read-only dependencies: ``ckt.bond`` /
-``ckt.dimension`` (public API only; their private helpers are deliberately
+Ownership: phase0-calibration. Read-only dependencies: ``crysh.dimensionality`` /
+``crysh.dimensionality`` (public API only; their private helpers are deliberately
 re-implemented here so this module stays self-contained). pymatgen
 (CrystalNN) and matplotlib are imported lazily inside functions.
 
@@ -51,10 +51,9 @@ from ase import Atoms
 from ase.data import chemical_symbols, covalent_radii
 from ase.io import read
 
-from ckt.bond import build_bond_graph
-from ckt.dimension import dimensionality_spectrum
-
-from .paths import KT_ROOT  # noqa: F401  (KT 工作目录，见 paths.py)
+from crysh.bond import build_bond_graph
+from crysh.dimensionality import dimensionality_spectrum
+from crysh.paths import KT_ROOT  # noqa: F401  (KT 工作目录，见 paths.py)
 
 # Fallback scale for uncalibrated pairs: the interim v1.1 global lambda.
 FALLBACK_COV_LAM = 1.20
@@ -404,7 +403,7 @@ def table_statistics(bonds_parquet, min_samples: int = _DEFAULT_MIN_SAMPLES,
 
 def build_cutoff_table(bonds_parquet, min_samples: int = _DEFAULT_MIN_SAMPLES,
                        quantile: float = _DEFAULT_QUANTILE) -> dict:
-    """{(Zi, Zj): r0} cutoff table compatible with ckt.bond.build_bond_graph.
+    """{(Zi, Zj): r0} cutoff table compatible with crysh.dimensionality.build_bond_graph.
 
     ``r0 = d_q95 x (1 + R0_TIE_GUARD)`` for pairs with ``n >= min_samples``
     reference CrystalNN bonds; otherwise the fallback
@@ -756,7 +755,7 @@ def validate_cutoff_table(folder_or_manifest, oracle_parquet: Path, table,
 
     * CN: per-atom site-aligned exact-match / MAE vs oracle ``cnn_cn`` (plus
       per-element and per-Larsen-dim splits, residual worst elements);
-    * dimensionality: ``ckt.dimension.d_star`` vs oracle ``larsen_dim`` with
+    * dimensionality: ``crysh.dimensionality.d_star`` vs oracle ``larsen_dim`` with
       the oracle-bench ambiguous rule (``dim_persistence < 0.5`` excluded);
     * missing-pair analysis (structure element pairs absent from the table,
       which bond.py would resolve to the bare covalent sum).
@@ -808,7 +807,7 @@ def validate_cutoff_table(folder_or_manifest, oracle_parquet: Path, table,
 
     n_struct = len(records)
     report = {
-        "generated_by": "ckt.calibration.validate_cutoff_table",
+        "generated_by": "crysh.calibration.validate_cutoff_table",
         "n_structures": int(n_struct),
         "n_failed": int(len(errors)),
         "errors": [{"structure_id": s, "error": e} for s, e in errors[:20]],

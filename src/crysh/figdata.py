@@ -21,12 +21,12 @@
       atlas/geom_counts.json      元素×几何计数（fig4）
       atlas/l3_token_counts.json  l3 token 计数 + 稀有 token 表（fig5/fig7 侧栏）
 
-路径全部参数化：显式 --kt > 环境变量 CKT_ROOT/CKT_WORK > contracts.md 上溯（见 ckt.paths）。
+路径全部参数化：显式 --kt > 环境变量 CKT_ROOT/CKT_WORK > contracts.md 上溯（见 crysh.paths）。
 集群上 KT=/thfs4/home/xuyong/zeng/kt 同样可跑。
 
 CLI（KT 根或 --kt）：
-    $CKT_PY -m ckt.figdata export-all [--kt DIR]
-    $CKT_PY -m ckt.figdata export-level0 [--kt DIR] ...（逐级）
+    $CKT_PY -m crysh.figdata export-all [--kt DIR]
+    $CKT_PY -m crysh.figdata export-level0 [--kt DIR] ...（逐级）
 """
 from __future__ import annotations
 
@@ -42,7 +42,8 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from .paths import resolve_kt_root as _resolve_kt_root  # 统一解析，见 paths.py
+from crysh.config import LAMBDA_COLS  # λ 网格唯一真源
+from crysh.paths import resolve_kt_root as _resolve_kt_root  # 统一解析，见 paths.py
 
 # 各级默认输入（相对 KT 根；显式参数可覆盖）
 _LEVEL_PATHS = {
@@ -67,7 +68,7 @@ _LEVEL_PATHS = {
     "atlas": ("postproc-atlas/data/records_2k.parquet",),
 }
 
-LAMBDAS = (0.90, 1.00, 1.10, 1.20, 1.35, 1.50, 1.75, 2.00)  # v1.3-L1：8 点网格
+LAMBDAS = tuple(LAMBDA_COLS)  # 来自 crysh.config，唯一真源
 DIM_LABELS = ["0D", "1D", "2D", "3D"]
 ACCUM_GRID = [100, 250, 500, 1000, 1500, 2000]
 # scale≠2k 时 accumulation 网格扩展（accumulation 对超出结构数的档位钳制，安全）
@@ -149,7 +150,7 @@ RECORDS_LITE_COLUMNS = [
 def resolve_kt_root(kt: str | Path | None = None) -> Path:
     """显式 --kt > 环境变量 CKT_ROOT/CKT_WORK > 标记文件上溯 > 旧深度兜底。
 
-    实际解析逻辑统一在 :mod:`ckt.paths`（全库唯一真相源）；本函数保留是因为
+    实际解析逻辑统一在 :mod:`crysh.paths`（全库唯一真相源）；本函数保留是因为
     figdata 的 CLI 约定一直是"``--kt`` 优先"，且有外部调用者用这个名字。
     """
     return _resolve_kt_root(kt).resolve()
@@ -166,14 +167,13 @@ def figdata_root(kt: str | Path | None = None) -> Path:
         3. ``<WORKING_DIR>/figdata``（= `01.working/figdata`）
         4. ``<KT>/figdata``（旧布局兜底，兼容集群侧未搬迁的目录）
     """
-    import os
 
     if kt is not None:
         return resolve_kt_root(kt) / "figdata"
     env = os.environ.get("CKT_FIGDATA")
     if env:
         return Path(env).expanduser()
-    from .paths import WORKING_DIR
+    from crysh.paths import WORKING_DIR
     cand = WORKING_DIR / "figdata"
     return cand if cand.is_dir() else resolve_kt_root(None) / "figdata"
 
@@ -213,7 +213,7 @@ def load(level: str, figdata_dir: str | Path | None = None,
     p = root / level / _figs_json_name(scale)
     if not p.is_file():
         raise FileNotFoundError(
-            f"{p} 不存在 —— 先在数据侧运行 `python -m ckt.figdata export-{level} "
+            f"{p} 不存在 —— 先在数据侧运行 `python -m crysh.figdata export-{level} "
             f"(或 export-all)` 导出 figdata"
         )
     return _read_json(p)
@@ -353,7 +353,7 @@ def export_level2(parquet_path: str | Path | None = None,
     root = resolve_kt_root(kt)
     df = _require(parquet_path or root / _scale_paths("level2", scale)[0],
                   "morphology parquet")
-    from ckt.morphology import MORPHOLOGY_CLASSES  # 只读常量
+    from crysh.morphology import MORPHOLOGY_CLASSES  # 只读常量
 
     counts = df["class_label"].value_counts().reindex(MORPHOLOGY_CLASSES).fillna(0).astype(int)
     present = counts[counts > 0].sort_values(ascending=False)
@@ -460,7 +460,8 @@ def export_level4(records_parquet: str | Path | None = None,
     df = _require(records_parquet or root / _paths[0], "geometry parquet")
     sdf = _require(sites_parquet or root / _paths[1], "geometry_sites parquet")
     from ase.data import chemical_symbols  # 只读
-    from ckt.geometry import GEOMETRY_LABELS  # 只读常量
+
+    from crysh.geometry import GEOMETRY_LABELS  # 只读常量
 
     c: Counter = Counter()
     for d in df["geom_label_counts"]:
@@ -524,7 +525,7 @@ def export_level5(token_counts_json: str | Path | None = None,
             "D_eff": block.get("D_eff"),
         }
 
-    from ckt.metrics import accumulation  # 只读
+    from crysh.metrics import accumulation  # 只读
     grid = _accum_grid_for(scale, int(len(df)))
     acc = {}
     for lev in ("l1", "l3", "l4"):
@@ -571,7 +572,7 @@ def export_oracle(fast_parquet: str | Path | None = None,
     oracle = pd.read_parquet(oracle_path)
     merged = fast.merge(oracle, on="structure_id", how="inner")
 
-    # --- dim 混淆矩阵（与 ckt.oracle.alignment_report 的 dim 块同式计算）---
+    # --- dim 混淆矩阵（与 crysh.oracle.alignment_report 的 dim 块同式计算）---
     dim_block: dict[str, Any] = None
     if "d_star" in merged.columns and "larsen_dim" in merged.columns:
         dim = merged[["d_star", "larsen_dim"]].copy()

@@ -41,7 +41,6 @@ import time
 from collections import Counter
 from collections.abc import Iterator
 from pathlib import Path
-from typing import Optional
 
 import pandas as pd
 from ase import Atoms
@@ -50,8 +49,8 @@ from ase.io import read as _ase_read
 
 logger = logging.getLogger("ckt.io")
 
-# KT 工作目录：统一由 ckt.paths 解析（CKT_ROOT 环境变量 > contracts.md 上溯 > 旧深度兜底）
-from .paths import KT_ROOT, LEVELS_DIR  # noqa: F401  (工作目录 / 各级数据根，见 paths.py)
+# KT 工作目录：统一由 crysh.paths 解析（CKT_ROOT 环境变量 > contracts.md 上溯 > 旧深度兜底）
+from crysh.paths import LEVELS_DIR  # 研究工程布局（仅默认值；R4 起由调用方显式传入）
 
 # 契约/任务书：多进程并行度 ≤ 8
 MAX_N_PROC = 8
@@ -104,7 +103,7 @@ def load_manifest(jsonl_path: Path) -> pd.DataFrame:
     if not jsonl_path.exists():
         raise FileNotFoundError(f"manifest not found: {jsonl_path}")
     rows: list[dict] = []
-    with open(jsonl_path, "r", encoding="utf-8") as fh:
+    with open(jsonl_path, encoding="utf-8") as fh:
         for line_no, line in enumerate(fh, 1):
             line = line.strip()
             if not line:
@@ -218,9 +217,9 @@ def build_registry(
     manifest_path: Path,
     out_parquet: Path,
     n_proc: int = MAX_N_PROC,
-    failures_csv: Optional[Path] = None,
-    checks_csv: Optional[Path] = None,
-    summary_json: Optional[Path] = None,
+    failures_csv: Path | None = None,
+    checks_csv: Path | None = None,
+    summary_json: Path | None = None,
 ) -> pd.DataFrame:
     """对 manifest 全量结构解析 → registry DataFrame，并写 parquet + 侧文件。
 

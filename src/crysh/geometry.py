@@ -15,13 +15,13 @@ top label 为 other，根因是 CN=12 金属环境（fcc/hcp）与键图 CN=14 �
   `m = (g.i == k)`（等价 np.bincount(g.i)）直接给出正确 CN；**不做事后
   对称化**（会双计）。历史教训：v1.0 单向 (i<j) 存储下，同一逻辑系统性
   漏计高索引原子（曾致 64.6% 站点 CN=0），v1.1 已由 level1 修复。
-- graph 为 None 时内部经 build_graph() 自算：`try import ckt.bond` 成功则用
+- graph 为 None 时内部经 build_graph() 自算：`try import crysh.bond` 成功则用
   level1 真实现；失败（尚未合入）则回退 ase.neighborlist
   (natural_cutoffs×λ, bothways=True)——ASE 对 per-atom 球半径的语义是
   "球重叠即成邻"（d_ij < c_i + c_j），与 BondGraph 的 d_ij < λ·r0_ij 定义
   严格等价（r0_ij = r_cov_i + r_cov_j），且双向保留与 v1.1 语义一致。
   **不阻塞、不死等。**
-- 键图标定：v1.1 interim λ* = 1.20（ckt.dimension.D_STAR_LAMBDA，pipeline
+- 键图标定：v1.1 interim λ* = 1.20（crysh.dimensionality.D_STAR_LAMBDA，pipeline
   L2–L5 公共键图）。build_graph 缺省 lam 取 λ*；phase-0 pair-cutoff 校准表
   落地后取代此常数。
 - 测试用自写 mock graph（level4-geometry/tests/test_geometry.py 内联
@@ -94,12 +94,9 @@ bcc_like 的 **CN=14 语义来自键图的 8+6**——bcc 次近邻（6 个 a �
 from __future__ import annotations
 
 import math
-from pathlib import Path
 from types import SimpleNamespace
 
 import numpy as np
-
-from .paths import KT_ROOT  # noqa: F401  (KT 工作目录，见 paths.py)
 
 # ---------------------------------------------------------------------------
 # 契约常量（contracts.md §3.7，frozen；v1.3-L4 前置金属扩展：+cuboctahedral/
@@ -162,15 +159,9 @@ _ROUTES = {
 # ---------------------------------------------------------------------------
 # BondGraph 依赖（level1 未合入时回退，不死等）
 # ---------------------------------------------------------------------------
-try:  # pragma: no cover - 取决于集成状态
-    from ckt.bond import build_bond_graph as _bond_build_bond_graph
-except Exception:  # noqa: BLE001 - 缺 level1 属预期开发态
-    _bond_build_bond_graph = None
-
-try:  # pragma: no cover - 取决于集成状态
-    from ckt.dimension import D_STAR_LAMBDA as _D_STAR_LAMBDA
-except Exception:  # noqa: BLE001 - 缺 level1 属预期开发态
-    _D_STAR_LAMBDA = 1.20  # v1.1 interim λ*
+# 键图与 λ* 口径来自同包的 canonical 实现（R2：不再有"缺 level1 就降级"的分支）
+from crysh.bond import build_bond_graph as _bond_build_bond_graph
+from crysh.config import D_STAR_LAMBDA as _D_STAR_LAMBDA
 
 
 def build_graph(atoms, lam: float | None = None):
