@@ -49,6 +49,8 @@ crysh = ["tables/*.json", "controls_data/**/*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 norecursedirs = ["data", "fig", "__pycache__", "*.egg"]
+# 核心测试默认全跑；研究侧（pymatgen 等）用 -m "not research" 可跳过
+markers = ["research: 需要 crysh[research] 依赖的用例"]
 
 [tool.ruff]
 line-length = 110

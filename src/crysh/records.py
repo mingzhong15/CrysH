@@ -12,8 +12,8 @@
 工程的数据流，不在库里。
 
 分层：
-- `map_structure(atoms, cfg) -> (record, side)`  单结构
-- `run_structure(atoms, cfg) -> record`          只取 record 的便捷入口
+- `map_structure(atoms, cfg) -> (record, side)`  单结构（含聚合侧数据）
+- `map_record(atoms, cfg) -> record`             单结构（只取 record，日常入口）
 - `run_batch(manifest, out_parquet, cfg, ...)`   manifest(jsonl) → parquet + 侧文件
 - `_write_outputs(...)`                          落盘（pandas 只在写出时需要）
 """
@@ -42,7 +42,7 @@ from crysh.morphology import morphology, morphology_with_diagnostics
 from crysh.tokens import motif_tokens
 from crysh.validity import apply_filters, default_thresholds, validity_metrics
 
-__all__ = ["map_structure", "run_structure", "run_batch"]
+__all__ = ["map_structure", "map_record", "run_batch"]
 
 _CN_TABLE_CACHE: dict[str, dict | None] = {}
 _THRESHOLDS_CACHE: dict[str, dict | None] = {}
@@ -210,8 +210,8 @@ def map_structure(atoms: Atoms, cfg: MapperConfig | None = None
     return ordered, side
 
 
-def run_structure(atoms: Atoms, cfg: MapperConfig | None = None) -> dict[str, Any]:
-    """只取 record（不返回侧数据）的便捷入口。"""
+def map_record(atoms: Atoms, cfg: MapperConfig | None = None) -> dict[str, Any]:
+    """单结构 → 一行 record（不返回侧数据）。文档与日常用的就是这个入口。"""
     rec, _side = map_structure(atoms, cfg)
     return rec
 

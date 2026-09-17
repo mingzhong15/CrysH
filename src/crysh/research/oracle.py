@@ -9,7 +9,7 @@ Contract: contracts.md §3.9. This module owns the "oracle-bench" subtask.
 
 Design notes
 ------------
-* pymatgen / matplotlib are imported lazily inside functions: ``import crysh.oracle``
+* pymatgen / matplotlib are imported lazily inside functions: ``from . import oracle``
   stays cheap, and workers only pay the import cost once per process.
 * A single bad structure can never kill a batch: every component is wrapped in
   try/except and recorded in the ``oracle_error`` column (per §3.9).
@@ -31,7 +31,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from crysh.paths import KT_ROOT  # noqa: F401  (KT 工作目录，见 paths.py)
+from .paths import KT_ROOT  # noqa: F401  (KT 工作目录，见 paths.py)
 
 DIM_LABELS = ["0D", "1D", "2D", "3D"]
 DIM_VALUES = (0, 1, 2, 3)

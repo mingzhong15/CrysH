@@ -13,7 +13,7 @@ from ase.build import bulk
 from ase.io import write
 
 from crysh.bond import build_bond_graph
-from crysh.calibration import (
+from crysh.research.calibration import (
     FALLBACK_COV_LAM,
     R0_TIE_GUARD,
     _cov_sum,
@@ -81,7 +81,7 @@ def test_extract_structure_cnn_bonds_diamond():
 
 def test_extract_cnn_bonds_end_to_end_and_consistency(tmp_path):
     """Folder -> parquet end-to-end + oracle cnn_cn consistency spot check."""
-    from crysh.oracle import run_crystalnn_cn  # public API only
+    from crysh.research.oracle import run_crystalnn_cn  # public API only
 
     folder = tmp_path / "structs"
     folder.mkdir()

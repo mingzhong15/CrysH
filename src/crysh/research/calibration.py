@@ -53,7 +53,7 @@ from ase.io import read
 
 from crysh.bond import build_bond_graph
 from crysh.dimensionality import dimensionality_spectrum
-from crysh.paths import KT_ROOT  # noqa: F401  (KT 工作目录，见 paths.py)
+from .paths import KT_ROOT  # noqa: F401  (KT 工作目录，见 paths.py)
 
 # Fallback scale for uncalibrated pairs: the interim v1.1 global lambda.
 FALLBACK_COV_LAM = 1.20

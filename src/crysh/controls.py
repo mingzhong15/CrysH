@@ -67,14 +67,14 @@ from ase.neighborlist import neighbor_list
 from crysh.config import (
     LAMBDAS_STAR as LAMBDAS,  # 6 点子网格（见 config 与 labels.yaml 的 expected_short_lambda_dim）
 )
-from crysh.paths import LEVELS_DIR  # 研究工程布局（仅默认值；R4 起由调用方显式传入）
 
 # 2026-09-17：controls 整体搬到 code/levels/controls/ → 数据随模块走，不按工作目录拼
 #: ground-truth 资产随库分发（labels.yaml + 44 个 POSCAR），不再依赖研究工作区布局
 DATA_DIR = Path(__file__).resolve().parent / "controls_data"
 STRUCTURES_DIR = DATA_DIR / "structures"
 LABELS_PATH = DATA_DIR / "labels.yaml"
-FIG_DIR = LEVELS_DIR / "controls" / "fig"
+#: 默认出图目录（在包内，避免依赖任何研究工作区布局；调用方可用 out_dir 覆盖）
+FIG_DIR = Path(__file__).resolve().parent / "figures"
 
 # ---------------------------------------------------------------------------
 # Frozen constants (mirrors of the frozen contract; keep in sync, do NOT edit

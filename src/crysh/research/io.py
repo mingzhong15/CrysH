@@ -50,7 +50,7 @@ from ase.io import read as _ase_read
 logger = logging.getLogger("ckt.io")
 
 # KT 工作目录：统一由 crysh.paths 解析（CKT_ROOT 环境变量 > contracts.md 上溯 > 旧深度兜底）
-from crysh.paths import LEVELS_DIR  # 研究工程布局（仅默认值；R4 起由调用方显式传入）
+from .paths import LEVELS_DIR  # 研究工程布局（仅默认值；R4 起由调用方显式传入）
 
 # 契约/任务书：多进程并行度 ≤ 8
 MAX_N_PROC = 8
