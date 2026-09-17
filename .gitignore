@@ -1,0 +1,39 @@
+# ─────────────────────────────────────────────────────────────
+# CrysH — ignore list
+# 原则：代码与文档入库；可重建的缓存、构建产物、编辑器残渣不入库。
+# ─────────────────────────────────────────────────────────────
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+*.so
+
+# Environments
+.venv/
+venv/
+.uvcache/
+.clusterlibs/
+
+# Test / lint / type caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Notebooks / editors / OS
+.ipynb_checkpoints/
+.vscode/
+.idea/
+.DS_Store
+*~
+*.orig
+*.bak-*
+
+# Local scratch
+scratch/
+*.log

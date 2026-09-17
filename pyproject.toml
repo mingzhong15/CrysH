@@ -1,0 +1,59 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "crysh"
+version = "0.1.0.dev0"
+description = "CrysH — a multi-layer crystal knowledge mapper: from structural validity to local building blocks and motif networks"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Qiyu Zeng", email = "zengqiyu15@163.com" }]
+keywords = ["crystal", "materials-informatics", "coordination", "topology", "motif", "knowledge-graph"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: Physics",
+  "Topic :: Scientific/Engineering :: Chemistry",
+]
+
+# 核心库刻意保持精简：只依赖 numpy + ase。
+# parquet/表格写出在可选 extra [tables]；研究工具（pymatgen 对照、figdata、出图）在 [research]。
+dependencies = [
+  "numpy>=1.26",
+  "ase>=3.22",
+]
+
+[project.optional-dependencies]
+tables = ["pandas>=2.1", "pyarrow>=14"]
+research = ["crysh[tables]", "pymatgen>=2024.1", "matplotlib>=3.8"]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[project.urls]
+Homepage = "https://github.com/mingzhong15/CrysH"
+Issues = "https://github.com/mingzhong15/CrysH/issues"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+crysh = ["tables/*.json", "controls_data/**/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+norecursedirs = ["data", "fig", "__pycache__", "*.egg"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]
+ignore = ["E501"]

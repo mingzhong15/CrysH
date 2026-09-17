@@ -1,0 +1,21 @@
+cff-version: 1.2.0
+message: "If you use CrysH in your research, please cite it as below."
+title: "CrysH: a multi-layer crystal knowledge mapper"
+abstract: >-
+  CrysH maps a crystal structure to a layered description: L0 validity, L1 periodic
+  dimensionality, L2 morphology, L3 local building blocks (coordination, geometry,
+  neighbour chemistry, distortion) and L4 motif-network architecture.
+authors:
+  - family-names: Zeng
+    given-names: Qiyu
+    email: zengqiyu15@163.com
+repository-code: "https://github.com/mingzhong15/CrysH"
+license: MIT
+type: software
+keywords:
+  - crystal structure
+  - materials informatics
+  - coordination environment
+  - periodic dimensionality
+  - motif network
+  - knowledge graph
