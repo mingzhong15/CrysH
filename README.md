@@ -49,6 +49,11 @@ sites[0].cn_species, sites[0].cn1, sites[0].cn_eff
 # ('Cl6', 6, 6.0)
 summary["cn_species_top"], summary["shell_conf_mean"]
 # ('Cl6', 0.325)
+
+# 多面体网络（L4）：谁和谁相连、连成几维、每个家族各自几维
+net = crysh.motif_network(bulk("NaCl", "rocksalt", a=5.64))
+net.dim, net.n_components, net.family_dims
+# (3, 2, {'Na': 3, 'Cl': 3})
 ```
 
 Batch a manifest of structures (multiprocess, writes records + side tables):
@@ -113,6 +118,7 @@ src/crysh/                 core (~4.4k lines incl. docstrings)
 ├── coord.py               L3 (coordination numbers)
 ├── geometry.py            L4 (features + q4/q6 routing)
 ├── localenv.py            L3 building blocks: m = (Z, CN, geometry, chemistry, distortion)
+├── motifnet.py            L4: motif super-node graph (connectivity, per-family dimensionality)
 ├── tokens.py              L5 tokens and sharing
 ├── metrics.py             vocabulary statistics (richness, effective diversity, accumulation)
 ├── records.py             map_record / map_structure / map_sites / run_batch
@@ -134,8 +140,14 @@ tests/                     runs standalone, no research data needed
   (physically corner-sharing) come out as `isolated`. Pinned by `xfail(strict=True)` tests
   in `tests/test_site_api.py`; fixing it changes frozen sharing tokens, so it ships with the
   next index/coverage rebuild.
-- `motifnet` (motif super-node graph, per-family dimensionality, edge vocabulary) is not
-  implemented yet.
+- `motifnet`'s `n_components` is a *local* view (a finite supercell truncates bonds that
+  cross its boundary); use `dimensionality.dimensionality_spectrum` for the periodic truth.
+- The `corner/edge/face` classification only applies where a ligand bridges exactly two
+  polyhedra (silicate/borate chemistry). Dense metals and rock-salt-type ionic solids are
+  reported as `"n/a"` with the shared-ligand count and interface span instead — in rock salt
+  the four shared Cl of adjacent octahedra span a quadrilateral, which is neither edge nor face.
+  Bringing silicates fully into scope needs a *local coordination polyhedron* construction
+  rather than supercell expansion; that is the next step.
 
 ## Verification
 

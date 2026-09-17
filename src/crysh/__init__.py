@@ -46,6 +46,7 @@ from crysh.config import (
     MapperConfig,
 )
 from crysh.metrics import accumulation, effective_diversity, novel_gain, richness
+from crysh.motifnet import MotifEdge, MotifNet, MotifNode, motif_network
 from crysh.records import SITE_SUMMARY_COLUMNS, map_record, map_sites, map_structure, run_batch
 from crysh.tokens import SHARING_CLASSES, TOKEN_LEVELS, motif_tokens
 
@@ -65,6 +66,11 @@ __all__ = [
     "map_structure",
     "map_sites",
     "run_batch",
+    # L4 motif 超节点图
+    "motif_network",
+    "MotifNet",
+    "MotifNode",
+    "MotifEdge",
     "SITE_SUMMARY_COLUMNS",
     # token 与词表统计
     "motif_tokens",
@@ -79,6 +85,7 @@ __all__ = [
 _LAZY_SUBMODULES = frozenset({
     "validity", "dimensionality", "morphology", "coord", "geometry", "bond",
     "tokens", "records", "controls", "config", "metrics", "dev", "research",
+    "localenv", "motifnet", "kernels",
 })
 
 

@@ -94,6 +94,19 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `labels.yaml` 的测试移到 `tests/research/test_controls_labels.py`，并断言方法分布
   （42 × `CrystalNN` + 2 × `shell_1.25_fallback`）。
 
+- `crysh.motifnet` —— **L4 motif 超节点图**。节点 = 多面体（CN≥4，或 CN=3 平面三角形），
+  边 = 共享配体实例；输出整体维数、**per-family 维数**（"1D TiO₆ 链长在 3D 框架里"就是
+  靠它）、连通分量、边类型分布与 top 家族对。维数与 L1 已冻结的 `d_star` 在
+  金刚石/岩盐/fcc/bcc/ZnS 上**逐一相等**（独立实现，测试钉住）。
+  设计取舍见 `crysh/motifnet.py` 的 docstring，要点两条：
+
+  1. **配体实例台账**：边按"配体**实例**（原子 + 周期像）"计数，而不是按原子数——
+     岩盐原胞只有 2 个原子，按原子数会把 6 个 Cl 邻居压成 1 个。
+  2. **术语适用域**：`corner/edge/face` 来自硅酸盐/硼酸盐（配体只桥接 2 个多面体）。
+     密堆金属与岩盐不满足前提——岩盐相邻八面体共享的 4 个 Cl 在空间上张成**四边形**
+     （既不是边也不是面）；fcc 的每个原子被 12 个"多面体"共用。这类情形给 `"n/a"`，
+     并同时给出共享配体数与界面跨度（`interface_span`），**不硬塞标签**。
+
 ### Known issues
 
 - **多面体共享判据（`tokens` 的 `sharing` / `f_corner|edge|face` / `sharing_label`）
@@ -112,8 +125,14 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
     token 生态、`f_corner/edge/face`、UI 树与 coverage-atlas。
   - 修法方向（留给下一版）：把共享判据整体搬到"配体实例 = (原子, 平移)"的显式表示上，
     与 :mod:`crysh.kernels` 的共享邻居表对齐，而不是复用 `tokens` 的邻居集合。
-- `motifnet`（motif 超节点图、per-family 维数、edge 词表、`l4@2`）**未做**——见
-  `01.working/knowledge_tree/plan-crysh.md` §4 的 M2。
+- `motifnet.n_components` 是**有限超胞上的局部视角**：跨超胞边界的键被截断，故对
+  小胞体系可能偏大（金刚石 3×3×3 得 2，真实周期网络是 1）。精确值用
+  `dimensionality.dimensionality_spectrum`（原胞整数秩，无截断）。已在 docstring 与
+  测试里如实标注，不假装两者等价。
+- 共享分类只在"真桥"（配体恰接 2 个中心）上给出 `corner/edge/face`；框架材料里
+  仍有部分边落在 `n/a`（配体在超胞里接了 >2 个中心）。要把框架材料的分类型做全，
+  正确做法是**限制在局部配位多面体**上判定，而不是靠超胞展开——留给下一版。
+- `l4@2` token（把 motif 图信息写回 token 串）**未做**——见 `plan-crysh.md` §4 的 M2。
 
 ### 两套邻居计数口径（刻意并存，勿互相"修正"）
 
