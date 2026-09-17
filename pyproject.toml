@@ -48,6 +48,11 @@ crysh = ["tables/*.json", "controls_data/**/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# 分层（目录即边界，见 tests/tables/conftest.py 的说明）：
+#   pytest tests --ignore=tests/tables --ignore=tests/research   只装 numpy+ase
+#   pytest tests --ignore=tests/research                         需 crysh[tables]
+#   pytest tests                                                 需 crysh[research]（全部）
+addopts = "--import-mode=prepend"
 norecursedirs = ["data", "fig", "__pycache__", "*.egg"]
 # 核心测试默认全跑；研究侧（pymatgen 等）用 -m "not research" 可跳过
 markers = ["research: 需要 crysh[research] 依赖的用例"]

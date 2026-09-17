@@ -13,7 +13,8 @@ from ase.build import bulk
 
 import crysh
 
-README = Path(__file__).resolve().parents[1] / "README.md"
+# 本文件在 tests/tables/ 下 → 仓库根是上两级（移动目录后这里曾断过，别再改回 parents[1]）
+README = Path(__file__).resolve().parents[2] / "README.md"
 
 
 def test_readme_quickstart_block_runs() -> None:
