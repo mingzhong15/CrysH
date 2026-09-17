@@ -30,7 +30,8 @@ import os
 from pathlib import Path
 from typing import Optional
 
-__all__ = ["resolve_kt_root", "kt_root", "KT_ROOT", "LEVELS_DIR"]
+__all__ = ["resolve_kt_root", "kt_root", "KT_ROOT", "LEVELS_DIR",
+           "WORKING_DIR", "FIGDATA_DIR", "figdata_dir", "SHARED_DIR"]
 
 #: 仓库/工作目录标记文件：只要它在那儿，就能认出"这是 KT 工作目录"
 MARKERS = ("contracts.md",)
@@ -109,6 +110,33 @@ def _resolve_levels_dir() -> Path:
     return KT_ROOT                                          # 旧布局兜底（集群侧）
 
 
+def _resolve_working_dir() -> Path:
+    """`01.working/` —— 跨主题共享产物的根（data/ figdata/ _shared/ 等）。
+
+    2026-09-17 重组（E 组）把主题产物分到 `01.working/<topic>/`，而**跨库共享**的
+    中间产物（figdata 聚合、子集 manifest、共享 QA）留在 `01.working/` 这一层，
+    不再塞进工作目录（`<KT>`，重组后只剩文档与入口脚本）。
+
+    优先级：``CKT_WORKING`` 环境变量 > 工作目录的上一级 > 工作目录本身（旧布局兜底）。
+    """
+    env = os.environ.get("CKT_WORKING")
+    if env:
+        return Path(env).expanduser()
+    parent = KT_ROOT.parent
+    if (parent / "figdata").is_dir() or (parent / "data").is_dir():
+        return parent
+    return KT_ROOT
+
+
+def figdata_dir() -> Path:
+    """figdata 聚合层根目录（``CKT_FIGDATA`` > ``<WORKING_DIR>/figdata`` > ``<KT>/figdata``）。"""
+    env = os.environ.get("CKT_FIGDATA")
+    if env:
+        return Path(env).expanduser()
+    cand = _resolve_working_dir() / "figdata"
+    return cand if cand.is_dir() else KT_ROOT / "figdata"
+
+
 #: 各级数据根目录（见 :func:`_resolve_levels_dir`）
 LEVELS_DIR = _resolve_levels_dir()
 
@@ -121,3 +149,12 @@ def kt_root() -> Path:
 #: 兼容旧代码的模块级常量。**注意**：在 import 时求值一次；
 #: 若运行中会改 ``CKT_ROOT``，请改用 :func:`kt_root`。
 KT_ROOT = resolve_kt_root()
+
+# 下面两个常量依赖 KT_ROOT/RESOLVED 结果，**必须**在 KT_ROOT 之后求值
+# （2026-09-17 踩坑：放在文件前部会 NameError）。
+#: 跨主题共享产物根（重组前 == KT_ROOT）
+WORKING_DIR = _resolve_working_dir()
+#: figdata 聚合层根（重组前 == KT_ROOT/figdata）
+FIGDATA_DIR = figdata_dir()
+#: 跨主题共享资料（docs/ 与一次性脚本；重组前 == KT_ROOT/docs 与 KT_ROOT/scripts）
+SHARED_DIR = WORKING_DIR / "_shared"

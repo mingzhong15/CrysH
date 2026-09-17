@@ -156,7 +156,26 @@ def resolve_kt_root(kt: str | Path | None = None) -> Path:
 
 
 def figdata_root(kt: str | Path | None = None) -> Path:
-    return resolve_kt_root(kt) / "figdata"
+    """figdata 聚合层根目录解析（2026-09-17 E 组重组后四步）。
+
+    重组把 figdata 从 `<KT>/figdata` 移到 `<repo>/01.working/figdata`（跨主题共享层），
+    因此不能再简单地拼 `kt/figdata`。优先级：
+
+        1. 显式 ``kt`` 参数（调用方明确指定某工作目录 → 沿用旧语义 `<kt>/figdata`）
+        2. 环境变量 ``CKT_FIGDATA``（env.sh 会设；集群 slurm 亦设）
+        3. ``<WORKING_DIR>/figdata``（= `01.working/figdata`）
+        4. ``<KT>/figdata``（旧布局兜底，兼容集群侧未搬迁的目录）
+    """
+    import os
+
+    if kt is not None:
+        return resolve_kt_root(kt) / "figdata"
+    env = os.environ.get("CKT_FIGDATA")
+    if env:
+        return Path(env).expanduser()
+    from .paths import WORKING_DIR
+    cand = WORKING_DIR / "figdata"
+    return cand if cand.is_dir() else resolve_kt_root(None) / "figdata"
 
 
 def _jdef(o: Any) -> Any:
