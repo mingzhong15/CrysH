@@ -42,7 +42,7 @@ from crysh.morphology import morphology, morphology_with_diagnostics
 from crysh.tokens import motif_tokens
 from crysh.validity import apply_filters, default_thresholds, validity_metrics
 
-__all__ = ["map_structure", "map_record", "run_batch"]
+__all__ = ["map_structure", "map_record", "run_structure", "run_batch"]
 
 _CN_TABLE_CACHE: dict[str, dict | None] = {}
 _THRESHOLDS_CACHE: dict[str, dict | None] = {}
@@ -214,6 +214,17 @@ def map_record(atoms: Atoms, cfg: MapperConfig | None = None) -> dict[str, Any]:
     """单结构 → 一行 record（不返回侧数据）。文档与日常用的就是这个入口。"""
     rec, _side = map_structure(atoms, cfg)
     return rec
+
+
+#: 历史名（研究工程的脚本与测试仍按 run_structure 调用）；新代码用 map_record。
+run_structure = map_record
+
+
+def make_mock_records(*args, **kwargs):  # pragma: no cover - 兼容壳
+    """历史名 → :func:`crysh.dev.make_synthetic_records`（见其 docstring 的语义说明）。"""
+    from crysh.dev import make_synthetic_records
+
+    return make_synthetic_records(*args, **kwargs)
 
 
 def _write_outputs(records: list[dict[str, Any]], sides: list[dict[str, Any]],

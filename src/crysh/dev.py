@@ -16,7 +16,7 @@ import numpy as np
 from ase import Atoms
 from ase.io import write as ase_write
 
-__all__ = ["synthetic_atoms", "write_synthetic_subset"]
+__all__ = ["synthetic_atoms", "write_synthetic_subset", "make_synthetic_records"]
 
 #: 造结构时轮换的元素池（金属 / 阴离子 / 轻元素），让 CN、几何与化学环境有分布
 _ELEM_POOLS = {
@@ -97,3 +97,29 @@ def write_synthetic_subset(out_dir: Path | str, n: int = 200, seed: int = 12345,
     manifest_path.write_text(
         "\n".join(json.dumps(r, ensure_ascii=False) for r in rows) + "\n", encoding="utf-8")
     return manifest_path, subset
+
+
+def make_synthetic_records(out_parquet: Path | str, n: int = 2000, seed: int = 42,
+                           cfg=None) -> Path:
+    """造 `n` 个合成结构并跑**真计算链**，产出一份 records parquet（+ 侧文件）。
+
+    用途：出图/报告的本地冒烟（真实语料只在集群）。注意语义——**结构是合成的，
+    指标不是**：这条路径与真实结构走的是同一个 `crysh.records.map_structure`。
+
+    历史名：研究工程里叫 `make_mock_records`（当时的实现会造假指标）；现在只造假结构。
+    """
+    import numpy as np
+
+    from crysh.config import MapperConfig
+    from crysh.records import map_structure, _write_outputs
+
+    out_parquet = Path(out_parquet)
+    cfg = cfg or MapperConfig()
+    rng = np.random.default_rng(seed)
+    records, sides = [], []
+    for i in range(int(n)):
+        rec, side = map_structure(synthetic_atoms(i, rng), cfg)
+        records.append(rec)
+        sides.append(side)
+    _write_outputs(records, sides, out_parquet)
+    return out_parquet
