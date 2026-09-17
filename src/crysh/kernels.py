@@ -27,7 +27,8 @@ from ase.neighborlist import neighbor_list as _ase_neighbor_list
 
 from crysh.bond import BondGraph, default_covalent_table
 
-__all__ = ["NeighborList", "neighbor_list", "masked_graph", "normalized_neighbor_table"]
+__all__ = ["NeighborList", "neighbor_list", "masked_graph",
+           "normalized_neighbor_table", "bond_ledger"]
 
 
 @dataclass
@@ -167,3 +168,45 @@ def normalized_neighbor_table(nl: NeighborList, lam: float
     d = nl.d.astype(np.float64)
     order = np.lexsort((d, site))
     return site[order], d[order], r_tilde[order], nbr[order], m[order]
+
+
+def bond_ledger(nl: NeighborList, lam: float | None = None
+                ) -> dict[int, list[tuple[int, int, int, int, float]]]:
+    """逐位点**键台账**：`{中心: [(邻居原子, Sx, Sy, Sz, d), ...]}`（唯一的有向键表）。
+
+    这是"共享/桥接/连通"这类问题的**唯一正确数据源**。以前把邻居压成集合
+    (`set[int]`) 再回头猜周期像，是所有共享判据反复失败的原因：一个晶胞里
+    "同一个邻居原子"可以出现在多个周期像里，压成集合就再也分不开了。
+
+    约定（与 :class:`BondGraph` 的 `S` 定义一致，已用几何核对）：
+    - 每条键记一次，`S` 是**邻居相对该中心**的胞平移，原样返回（不取负）；
+    - 所以邻居的位置 = ``pos[邻居] + S · cell``（分数坐标即 ``frac[邻居] + S``）；
+      实测：对金刚石 0 号位点，``|pos[4] + S·cell - pos[0]| == 2.352 Å == d``。
+    - 反向键各自独立成条（`(i,j,S)` 与 `(j,i,-S)`），需要对称化时用
+      :func:`crysh.coord._count_cn` 的口径。
+
+    Parameters
+    ----------
+    nl:
+        :func:`neighbor_list` 的产物（含到 `lam_max` 的全部候选）。
+    lam:
+        `None`（默认）表示取 `nl.lam_max`（全部候选键）；给值则只保留 `d < lam·r0`。
+
+    Returns
+    -------
+    dict
+        键为**被作为中心**的原子索引；值为 `(邻居, Sx, Sy, Sz, d)` 列表（按距离升序）。
+        只出现在 `j` 侧、自己不是任何键中心的原子不会出现在字典里。
+    """
+    lam_eff = float(nl.lam_max if lam is None else lam)
+    m = nl.masked(lam_eff)
+    i = nl.i[m].astype(np.int64)
+    j = nl.j[m].astype(np.int64)
+    S = nl.S[m].astype(np.int64)
+    d = nl.d[m].astype(np.float64)
+    out: dict[int, list[tuple[int, int, int, int, float]]] = {}
+    order = np.lexsort((d, i))
+    for a, b, (sx, sy, sz), dd in zip(i[order].tolist(), j[order].tolist(),
+                                      S[order].tolist(), d[order].tolist()):
+        out.setdefault(a, []).append((int(b), int(sx), int(sy), int(sz), float(dd)))
+    return out

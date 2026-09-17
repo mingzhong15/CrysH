@@ -67,9 +67,10 @@ def _neighbor_sets(graph, n_atoms: int) -> list[list[tuple[int, int, int, int]]]
        键：正向 `(j, S)` 与反向 `(i, -S)` 合并后 `np.unique`，故
        `len(nbrs[a]) == coord.cn[a]` 对任意结构成立（有测试钉住）。
 
-    返回的平移是**反向**的（`-S`）：`(b, T)` 表示 b 位于 `pos[b] + T·cell`。
-    这一点对共享判据至关重要——两个多面体"共享同一个配体"要求的是**同一个空间位置**，
-    必须把平移算进去（金刚石本来有 corner-sharing，只看原子索引会判成 isolated）。
+    返回的平移与 :class:`crysh.bond.BondGraph` 的 `S` **同向**：`(b, S)` 表示该邻居
+    位于 ``pos[b] + S·cell``（实测：金刚石 0 号位点 ``|pos[4] + S·cell - pos[0]| == d``）。
+    早期实现多取了一次负号（并把它写成"反向"的注释），是符号错误——虽然当时的共享判据
+    只用索引、用不到符号，但留着就是给后来人埋雷。
 
     契约影响：l3 token 的**格式不变**（`Z|CN|geom|chem`），变的是化学串取值——
     修的是错值，不是 schema。
@@ -79,15 +80,24 @@ def _neighbor_sets(graph, n_atoms: int) -> list[list[tuple[int, int, int, int]]]
     S = np.asarray(graph.S, dtype=np.int64).reshape(-1, 3)
     if i.size == 0:
         return [[] for _ in range(n_atoms)]
-    same = i == j
-    fwd = np.column_stack([i, j, S])
-    rev = np.column_stack([j, i, -S])[~same]
-    keys = np.unique(np.vstack([fwd, rev]), axis=0)
+    keys = np.unique(np.column_stack([i, j, S]), axis=0)   # 有向键去重（一条一次）
 
     nbrs: list[list[tuple[int, int, int, int]]] = [[] for _ in range(n_atoms)]
+    seen: list[set[tuple[int, int, int, int]]] = [set() for _ in range(n_atoms)]
     for a, b, sx, sy, sz in keys.tolist():
-        # 键里的 S 是"j 相对 i"的平移；存成"邻居 b 相对 a"的位置平移（取负）
-        nbrs[a].append((b, -sx, -sy, -sz))
+        # 每个**有向**键只登记一次，两端的平移各自带正确符号：
+        #   a 的邻居 b 位于 pos[b] + S·cell
+        #   b 的邻居 a 位于 pos[a] - S·cell（同一条键从另一端看）
+        # 两次踩坑记录：① 只登记一个方向并统一取负 → 符号错（金刚石 0 号位点有 3 个
+        # 邻居的位置被算成 13.5 Å 而非 2.35 Å）；② 把反向也补一遍却又遍历了双向键
+        # → 每条键重复计两次（金刚石的 `Si4` 变成 `Si8`）。
+        for site, nbr, s3 in ((a, b, (int(sx), int(sy), int(sz))),
+                              (b, a, (-int(sx), -int(sy), -int(sz)))):
+            if site == nbr:
+                continue
+            if (nbr, *s3) not in seen[site]:
+                seen[site].add((nbr, *s3))
+                nbrs[site].append((nbr, *s3))
     return nbrs
 
 
