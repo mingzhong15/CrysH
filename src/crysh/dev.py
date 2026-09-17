@@ -111,7 +111,7 @@ def make_synthetic_records(out_parquet: Path | str, n: int = 2000, seed: int = 4
     import numpy as np
 
     from crysh.config import MapperConfig
-    from crysh.records import map_structure, _write_outputs
+    from crysh.records import _write_outputs, map_structure
 
     out_parquet = Path(out_parquet)
     cfg = cfg or MapperConfig()

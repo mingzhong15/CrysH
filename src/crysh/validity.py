@@ -178,7 +178,6 @@ def validity_metrics(atoms: Atoms, q_c: float = 0.85) -> dict[str, Any]:
     - n_core_overlap_pairs：d < r_core_i+r_core_j 对数（OpenMX 冻芯重叠，
       见 _core_overlap_pairs；v1.3）。
     """
-    z = np.asarray(atoms.get_atomic_numbers(), dtype=int)
     radii = _radii(atoms)
 
     # --- 近邻集合：per-atom 半径式 cutoff（等价 build_bond_graph(lam=1.3) 边集）--
@@ -380,7 +379,6 @@ def distribution_shift_report(ref_df, test_df, thresholds: dict | None = None,
             "ks_2samp": ks,
         }
     # flag 占比（两侧同阈值）
-    thr = thresholds or {}
     for name, df in (("ref", ref_df), ("test", test_df)):
         rates: dict[str, float] = {}
         for c in cols:

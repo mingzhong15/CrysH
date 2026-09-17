@@ -57,9 +57,6 @@ from typing import Any
 import numpy as np
 from ase.data import atomic_numbers
 
-from crysh.bond import BondGraph  # 键图类型（同包，直接依赖）
-
-
 LOW_PERCENTILE = 0.05
 HIGH_PERCENTILE = 0.95
 CN_HIST_BINS = 17  # cn_hist 索引 0..16

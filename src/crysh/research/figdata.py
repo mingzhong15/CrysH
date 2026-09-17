@@ -43,6 +43,7 @@ import numpy as np
 import pandas as pd
 
 from crysh.config import LAMBDA_COLS  # λ 网格唯一真源
+
 from .paths import resolve_kt_root as _resolve_kt_root  # 统一解析，见 paths.py
 
 # 各级默认输入（相对 KT 根；显式参数可覆盖）

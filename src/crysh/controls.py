@@ -202,7 +202,7 @@ def _ref_dim(atoms: Atoms, lam: float) -> int:
     n = len(atoms)
     adj: list[list[tuple[int, np.ndarray]]] = [[] for _ in range(n)]
     for e in range(len(i)):
-        si, sj = S[e].astype(int), S[e].astype(int)
+        si = S[e].astype(int)
         adj[i[e]].append((j[e], si))
         adj[j[e]].append((i[e], -si))
     visited = np.zeros(n, dtype=bool)
@@ -934,7 +934,6 @@ def make_figs(out_dir: Path | None = None) -> list[Path]:
     out_dir.mkdir(parents=True, exist_ok=True)
     records = build_all()
     fams = [e["family"] for _, _, e in records]
-    ids = [sid for sid, _, _ in records]
     natom = np.array([e["natom"] for _, _, e in records], dtype=float)
     vol_per_atom = np.array(
         [a.get_volume() / len(a) for _, a, _ in records], dtype=float)
